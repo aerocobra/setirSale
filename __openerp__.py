@@ -20,6 +20,7 @@
 				],
     "data": [
 		"views/setirSaleOrderForm.xml",
+		"data/data.xml",
     ],
     "installable": True,
     "application": True,

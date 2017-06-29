@@ -1,112 +1,262 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # -*- setirSale.py
 from openerp import tools
-from openerp import models, fields, api
 from pygments.lexer import _inherit
+
+from datetime import datetime, timedelta
+from openerp import SUPERUSER_ID
+from openerp import api, fields, models, _
+import openerp.addons.decimal_precision as dp
+from openerp.exceptions import UserError
+from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
 
-	x_datetimePO			= fields.Datetime	(	string			= "F PV",			help	= "fecha de Pedido de Venta")
-	x_datetimePOcompleted	= fields.Datetime	(	string			= "F PV Realizado",	help	= "fecha de Pedio de Venta Realizado")
-	x_idOperationUser		= fields.Many2one	(	comodel_name	= "res.users",		string	= "Responsable operación")
+	x_dtPOconfirm		= fields.Datetime	(	string			= "F PV",			help	= "fecha de Pedido de Venta")
+	x_dtPOdone			= fields.Datetime	(	string			= "F PV Realizado",	help	= "fecha de Pedio de Venta Realizado")
+	x_idOperationUser	= fields.Many2one	(	comodel_name	= "res.users",		string	= "Responsable operación")
 
-	@api.one
-	def wfa_aprobar_por_operaciones (self):
-		self.write ( {"x_datetimeApprovedByOperation" : fields.Datetime.now()})
-		#self.message_post ( body = "responsable de operaciones: APROBADO")
+	x_fRevenue			= fields.Float		(	string				= 'Beneficio SETIR',
+												store				= True,
+												compute				= '_amount_all',
+												track_visibility	= 'always')
+
+	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
+	@api.model
+	def create(self, vals):
+		result = super (setirSaleOrder, self).create (vals)
+		#self.notify_work_flow ( "Presupuesto (oferta) CREADO")
+		return result
+
+	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
+	@api.multi
+	def action_confirm(self):
+		for order in self:
+			#codigo estandar
+			order.state = 'sale'
+			if self.env.context.get('send_email'):
+				self.force_quotation_send()
+			order.order_line._action_procurement_create()
+			if not order.project_id:
+				for line in order.order_line:
+					if line.product_id.invoice_policy == 'cost':
+						order._create_analytic_account()
+						break
+			#codigo setir *****************************************************
+			#order.x_dtPOconfirmed	= fields.Datetime.now()
+			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
+			order.notify_work_flow( "PEDIDO DE VENTA - VENTA CONFIRMADA")
+			#fin codigo setir *************************************************
+
+		if self.env['ir.values'].get_default('sale.config.settings', 'auto_done_setting'):
+			self.action_done()
+		return True
+
+	@api.multi
+	def action_done(self):
+		#self.write({'state': 'done'})
+		super ( setirSaleOrder, self).action_done()
+		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+		self.notify_work_flow( "PEDIDO DE VENTA - REALIZADO")
+
+	@api.multi
+	def action_cancel(self):
+		#self.write({'state': 'cancel'})
+		super ( setirSaleOrder, self).action_cancel()
+		self.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
+		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+		self.notify_work_flow( "CANCELADO")
+
+	@api.multi
+	def action_draft(self):
+		super ( setirSaleOrder, self).action_draft()
+		self.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
+		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+		self.notify_work_flow( "BORRADOR")
+
+	#manada correo al comercial y al resposable del departameinto de "operaciones"
+	#por lo que es necesario crear el departamiento "operaciones" y su responsabñle con el correo establecido
+	def notify_work_flow ( self, strMsg):
+		order = self
+		#al comercial responsable
+		strMailTo = order.user_id.email
+		#al responsable del departamento operaciones
+		strMailCc = self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.work_email
+		
+		strName		= order.name
+		if order.name == False:
+			strName = "NUEVO"
+
+		#strState	= str ( dict(self.fields_get(allfields=['state'])['state']['selection'])[order.state])
+		strUser		= order.user_id.name
+		if order.user_id.name == False:
+			strUser = "consultar"
+
+		strNotification = "FT: orden [" + strName + "]: nuevo estado [" + strMsg + "] establecido por [" + strUser + "]"
+
+		order.send_mail_note (
+								strMailTo,
+								strMailCc,
+								"sistemas@setir.es",
+								strNotification,
+								strNotification
+							)
+
+		self.message_post ( strNotification)
 
 	#self.send_mail_note( 'igor.kartashov@setir.es, astic@astic.net', data.get('company_name'), data.get('name'))
-	def send_mail_note ( self, email_to, email_from, subject, msg):
-		mail_pool = request.env['mail.mail']
+	def send_mail_note ( self, email_to, email_cc, email_from, subject, msg):
+		mail_pool = self.env['mail.mail']
 
 		values={}
-		values.update({'email_to': email_to})
-		values.update({'email_from': email_from})
-		values.update({'subject': subject})
-		values.update({'body_html': msg})
-		#values.update({'body': 'partner actualizado' })
-		#values.update({'res_id': track_id}) #[optional] 'obj.id' here is the record id, where you want to post that email after sending
-		#values.update({'model': 'res.partner'}) #[optional] here is the object(like 'project.project')  to whose record id you want to post that email after sending
+		values.update({'email_to':		email_to})
+		values.update({'email_cc':		email_cc})
+		values.update({'email_from':	email_from})
+		values.update({'subject':		subject})
+		#values.update({'body':			'contenidos en html' })
+		values.update({'body_html':		msg})
+		#[optional] 'obj.id' here is the record id, where you want to post that email after sending
+		#values.update({'res_id':		self.id})
+		#[optional] here is the object(like 'project.project')  to whose record id you want to post that email after sending
+		#values.update({'model':		'sale.order'})
+		
 		msg_id = mail_pool.create(values)
 		# And then call send function of the mail.mail,
 		if msg_id:
 			mail_pool.send([msg_id])
 
+	#sobreescrito para rRevenue
+	@api.one
+	@api.depends('order_line.price_total')
+	def _amount_all(self):
+		"""
+		Compute the total amounts of the SO.
+		"""
+		for order in self:
+			rRevenue = amount_untaxed = amount_tax = 0.0
+			for line in order.order_line:
+				amount_untaxed += line.price_subtotal
+				rRevenue += line.x_fPriceMargin * line.product_uom_qty
+				# FORWARDPORT UP TO 10.0
+				if order.company_id.tax_calculation_rounding_method == 'round_globally':
+					price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+					taxes = line.tax_id.compute_all(price, line.order_id.currency_id, line.product_uom_qty, product=line.product_id, partner=line.order_id.partner_id)
+					amount_tax += sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
+				else:
+					amount_tax += line.price_tax
+			order.update({
+				'amount_untaxed': order.pricelist_id.currency_id.round(amount_untaxed),
+				'amount_tax': order.pricelist_id.currency_id.round(amount_tax),
+				'amount_total': amount_untaxed + amount_tax,
+				'x_fRevenue': self.pricelist_id.currency_id.round ( rRevenue)
+			})
+
 
 class setirSaleOrderLine ( models.Model):
 	_inherit = "sale.order.line"
 
-	x_idsTarifa			= fields.Many2one	(
-												comodel_name	= "product.pricelist",
-												string			= "tarifa",
-												required		= True,
-												copy			= True
-											)
+	x_fPriceMargin		= fields.Float ( string		= "MARGEN",	required	= True)
+	x_fPriceProvider	= fields.Float ( string		= "PRVDR",	required	= True,	inverse	= "on_price_provider_change")
 
-
-	x_strTarifa		= fields.Char ( string = "Tarifa")
+	x_strTarifa		= fields.Char ( string = "Tarifa", readonly = True)
+	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
 	x_eProvider		= fields.Selection (
-											selection	= "get_providers",
-											size		= 1,
 											string		= "Proveedor",
+											selection 	= "get_providers",
 											inverse		= "product_uom_change",
-											required	= True,
-											copy		= True
+											required	= True
 											)
-
-	x_fPriceProvider	= fields.Float ( string = "PRVR")
-	x_fPriceReseller	= fields.Float ( string = "SETIR")
 
 	def get_providers (self):
 		providers = []
 		for partner in self.env['res.partner'].search([]):
 			if partner.is_company == True and partner.supplier == True:
-				providers.append ( ( partner.id, partner.name))
+				providers.append ( ( str(partner.id), partner.name))
 
 		return providers
 
-	#se sibreescribe el metodo para que coja la tarida de cada  linea de pedido en vez de todo el pedido
+	@api.one
+	@api.onchange('x_fPriceProvider')
+	def on_price_provider_change ( self):
+		self.x_fPriceMargin		= self.price_unit - self.x_fPriceProvider
+
+	#sobreescrito para 'price_unit'
+	@api.depends('product_uom_qty', 'discount', 'price_unit', 'tax_id')
+	def _compute_amount(self):
+		for l in self:
+			l.x_fPriceMargin	= l.price_unit - l.x_fPriceProvider
+		super (setirSaleOrderLine, self)._compute_amount()
+
+	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
+	@api.one
 	@api.onchange('product_uom', 'product_uom_qty', 'x_eProvider')
 	def product_uom_change ( self):
 		if not self.product_uom:
 			self.price_unit = 0.0
 			return
 
-		idTarifa = 0
-		rsTarifas	= self.env['product.pricelist'].search([('x_partner_id', '=', self.x_eProvider)])
+		#limpiar de los datos anteriores
+		self.x_strTarifa		= "sin tarifa"
+		self.x_fPriceProvider	= 0.0
+		self.x_fPriceMargin		= 0.0
+
+		#obtener tarifa en función del proveedor y producto selecccionados
+		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
+		if not rsTarifas:
+			self.price_unit = 0.0
+			return
+		#idTarifa			= 0
 		for tarifa in rsTarifas:
-			if self.product_id == tarifa.items_ids[0].product_id:
-				idTarifa			= tarifa.id
+			if self.product_id == tarifa.item_ids[0].product_id:
+				#idTarifa			= tarifa.id
 				self.x_strTarifa	= tarifa.name
 				break
 
-		if idTarifa and self.order_id.partner_id:
+		if tarifa.id and self.order_id.partner_id:
 			product	= self.product_id.with_context	(
 														lang			= self.order_id.partner_id.lang,
 														partner			= self.order_id.partner_id.id,
 														quantity		= self.product_uom_qty,
 														date_order		= self.order_id.date_order,
 														#pricelist		= self.order_id.pricelist_id.id,
-														pricelist		= idTarifa,
+														#poner la tarifa de la linea de pedido en vez del todo pedido
+														pricelist		= tarifa.id,
 														uom				= self.product_uom.id,
 														fiscal_position	= self.env.context.get('fiscal_position')
 													)
 
 			self.price_unit = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
 
-			x_fPriceProvider	= -1.0
-			x_fPriceReseller	= -1.0
-			for item in tarifa.item_ids:
-				if self.product_uom_qty > item.min_quantity:
-					x_fPriceProvider	= item.x_fixed_price_provider
-					x_fPriceReseller	= item.x_fixed_price_reseller
+			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
+				if self.product_uom_qty >= item.min_quantity:
+					self.x_fPriceProvider	= item.x_fixed_price_provider
+					self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
+					break
 
 	@api.multi
 	@api.onchange('product_id')
 	def product_id_change(self):
 		if not self.product_id:
 			return {'domain': {'product_uom': []}}
+
+		#limpiar de los datos anteriores
+		self.x_strTarifa		= "sin tarifa"
+		self.x_fPriceProvider	= 0.0
+		self.x_fPriceMargin		= 0.0
+		#obtener tarifa en función del proveedor y producto selecccionados
+		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
+		if not rsTarifas:
+			self.price_unit = 0.0
+			return {'domain': {'product_uom': []}}
+
+		#idTarifa			= 0
+		for tarifa in rsTarifas:
+			if self.product_id == tarifa.item_ids[0].product_id:
+				#idTarifa			= tarifa.id
+				self.x_strTarifa	= tarifa.name
+				break
 
 		vals = {}
 		domain = {'product_uom': [('category_id', '=', self.product_id.uom_id.category_id.id)]}
@@ -115,13 +265,15 @@ class setirSaleOrderLine ( models.Model):
 			vals['product_uom_qty'] = 1.0
 
 		product = self.product_id.with_context(
-			lang=self.order_id.partner_id.lang,
-			partner=self.order_id.partner_id.id,
-			quantity=vals.get('product_uom_qty') or self.product_uom_qty,
-			date=self.order_id.date_order,
-			pricelist=self.x_idsTarifa.id,
-			uom=self.product_uom.id
-			)
+			lang		= self.order_id.partner_id.lang,
+			partner		= self.order_id.partner_id.id,
+			quantity	= vals.get('product_uom_qty') or self.product_uom_qty,
+			date		= self.order_id.date_order,
+			#pricelist=self.order_id.pricelist_id.id,
+			#poner la tarifa de la linea de pedido en vez del todo pedido
+			pricelist	= tarifa.id,
+			uom			= self.product_uom.id
+		)
 
 		name = product.name_get()[0][1]
 		if product.description_sale:
@@ -132,27 +284,36 @@ class setirSaleOrderLine ( models.Model):
 
 		if self.order_id.pricelist_id and self.order_id.partner_id:
 			vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
+			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
+				if self.product_uom_qty >= item.min_quantity:
+					self.x_fPriceProvider	= item.x_fixed_price_provider
+					self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
+					break
+
+
 		self.update(vals)
 		return {'domain': domain}
 
-class setirProductPrecelist ( models.Model):
-	_inherit = "product.pricelist"
-											
 
+
+
+class setirProductPricelist ( models.Model):
+	_inherit = "product.pricelist"
+										
 	#el proveedor del acual depende la tarifa
 	x_idPartner			= fields.Many2one(
 											comodel_name	= "res.partner",
 											string			= "Proveedor",
 											inverse			= "partner_change",
+											required		= True
 										)
 	x_partner_id		= fields.Integer()
 
 	@api.onchange('x_idPartner')
 	def partner_change ( self):
-		self.x_partner_id = x_idPartner.id
+		self.x_partner_id = self.x_idPartner.id
 
-class setirProductPrecelistItem ( models.Model):
+class setirProductPricelistItem ( models.Model):
 	_inherit = "product.pricelist.item"
 
 	x_fixed_price_provider	= fields.Float ( string = "Proveedor")
-	x_fixed_price_reseller	= fields.Float ( string = "SETIR")

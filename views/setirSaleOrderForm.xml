@@ -15,21 +15,34 @@
 				<xpath expr="/form/sheet/group/group/field[@name='pricelist_id']" position="attributes">
 					<attribute name="invisible">True</attribute>
 				</xpath>
+
 				<!-- FORM: poner tarifa en cada linea ed pedido -->
-				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='price_unit']" position="after">
-					<field name="x_strTarifa"/>
+				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='product_id']" position="after">
 					<field name="x_eProvider"/>
+					<field name="x_strTarifa" readonly="1"/>
+				</xpath>
+				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='price_unit']" position="after">
 					<field name="x_fPriceProvider"/>
-					<field name="x_fPriceReseller"/>
+					<field name="x_fPriceMargin"/>
+				</xpath>
+				<!-- poner  total beneficio reseller -->
+				<xpath expr="/form/sheet/notebook/page/group/field[@name='amount_untaxed']" position="before">
+					<field name="x_fRevenue" nolabel="0" widget="monetary" readonly="1" help="Importe neto, sin impuestos"/>
 				</xpath>
 				
 				<!-- TREE: poner tarifa en cada linea ed pedido -->
-				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='price_unit']" position="after">
-					<field name="x_strTarifa"/>
+				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='name']" position="after">
 					<field name="x_eProvider"/>
-					<field name="x_fPriceProvider"/>
-					<field name="x_fPriceReseller"/>
+					<field name="x_strTarifa" readonly="1"/>
 				</xpath>
+				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='product_uom']" position="attributes">
+					<attribute name="string">UOM</attribute>
+				</xpath>
+				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='price_subtotal']" position="after">
+					<field name="x_fPriceProvider"/>
+					<field name="x_fPriceMargin"/>
+				</xpath>
+
 				<!-- SALES, añadir presupuso relaciondo de oferta/facturación -->
 				<xpath expr="/form/sheet/notebook/page/group/group/field[@name='user_id']" position="before">
 					<field name="opportunity_id" context="{'default_groups_ref': ['base.group_user', 'base.group_partner_manager', 'account.group_account_invoice', 'base.group_sale_salesman_all_leads']}"/>
@@ -40,8 +53,12 @@
 					<group string="Información para operaciones" name="operation_person">
 						<!-- IMPORTANTE: ventas.aprobador_operaciones ID externo del grupo  "aprobador de operaciones"  -->
 						<!-- 1.crear grupo 2.exportar el registro 3. renombrar ID externo a "ventas.aprobador_operaciones" -->
-						<!-- Settings Technical Sequences and Identifiers External Identifiers -->
-						<field name="x_idOperationUser" groups="ventas.aprobador_operaciones"/>
+						<!-- Settings_Technical_Sequences and Identifiers_External Identifiers -->
+						<!--  groups="ventas.aprobador_operaciones" -->
+						<field name="x_idOperationUser"/>
+						<field name="x_dtPOconfirm"/>
+						<field name="x_dtPOdone"/>
+
 						<!-- FLOW: sale.order.basic -->
 						<!-- field name="x_datetimeApprovedByOperation"  attrs="{'readonly': [('user_id', '!=', 1)]}"/ -->
 						<!-- button name="wfa_aprobar_por_operaciones" string="Aprobar" type="object" groups="ventas.aprobador_operaciones" attrs="{'invisible': [('state' , '!=', 'sale')]}"/ -->
@@ -62,9 +79,12 @@
 			<field name="inherit_id" ref="product.product_pricelist_item_form_view"/>
 			<!-- new structure in the form view -->
 			<field name="arch" type="xml">
+				<xpath expr="/form/group/group/div/div/field[@name='fixed_price']" position="attributes">
+					<attribute name="nolabel">"0"</attribute>
+				</xpath>
 				<xpath expr="/form/group/group/div/div/field[@name='fixed_price']" position="after">
-				<field name="x_fixed_price_provider"/>
-                <field name="x_fixed_price_reseller"/>
+					<label for="x_fixed_price_provider" string="Precio Proveedor"/>
+					<field name="x_fixed_price_provider" widget="money" nolabel="0"/>
 				</xpath>
 			</field>
 		</record>
@@ -81,7 +101,8 @@
 			<!-- new structure in the form view -->
 			<field name="arch" type="xml">
 				<xpath expr="/form/sheet/div/h1[1]" position="after">
-				<field name="x_idPartner" string="Proveedor"/>
+				<label for="x_idPartner" string="Proveedor"/>
+				<field name="x_idPartner" nolabel="0"/>
 				</xpath>
 			</field>
 		</record>
