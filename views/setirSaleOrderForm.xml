@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
+	<!-- data>
+		<record model="ir.ui.view" id="setirSaleOrderFormTemplate">
+			<field name="name">setirSaleOrderFormTemplate</field>
+			<field name="model">sale.quote.template</field>
+			<field name="inherit_id" ref="website_quote.view_sale_quote_template_form"/>
+			<field name="arch" type="xml">
+			</field>
+		</record>
+	</data -->
 	<data>
 		<!-- For the form view and id field (whatever) -->
 		<record model="ir.ui.view" id="setirSaleOrderForm">
@@ -11,28 +20,36 @@
 			<field name="inherit_id" ref="sale.view_order_form"/>
 			<!-- new structure in the form view -->
 			<field name="arch" type="xml">
+
+				<!-- SALE.ORDER -->
 				<!-- quitar tarifa de arriba-->
 				<xpath expr="/form/sheet/group/group/field[@name='pricelist_id']" position="attributes">
 					<attribute name="invisible">True</attribute>
 				</xpath>
+				<!-- poner el proveedor comun para todas lás líneas de pedido -->
+				<xpath expr="/form/sheet/group/group/field[@name='payment_term_id']" position="after">
+					<field name="x_eProvider"/>
+				</xpath>
 
+				<!-- SALE.ORDER.LINE -->
 				<!-- FORM: poner tarifa en cada linea ed pedido -->
 				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='product_id']" position="after">
-					<field name="x_eProvider"/>
+					<!-- field name="x_eProvider"/ -->
 					<field name="x_strTarifa" readonly="1"/>
 				</xpath>
 				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='price_unit']" position="after">
 					<field name="x_fPriceProvider"/>
 					<field name="x_fPriceMargin"/>
+					<field name="x_fMarginSubtotal"/>
 				</xpath>
 				<!-- poner  total beneficio reseller -->
 				<xpath expr="/form/sheet/notebook/page/group/field[@name='amount_untaxed']" position="before">
-					<field name="x_fRevenue" nolabel="0" widget="monetary" readonly="1" help="Importe neto, sin impuestos"/>
+					<field name="x_fRevenue" widget="monetary" nolabel="0" readonly="1" class="oe_subtotal_footer_separator o_td_label"/>
 				</xpath>
 				
 				<!-- TREE: poner tarifa en cada linea ed pedido -->
 				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='name']" position="after">
-					<field name="x_eProvider"/>
+					<!-- field name="x_eProvider"/ -->
 					<field name="x_strTarifa" readonly="1"/>
 				</xpath>
 				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='product_uom']" position="attributes">
@@ -41,6 +58,7 @@
 				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='price_subtotal']" position="after">
 					<field name="x_fPriceProvider"/>
 					<field name="x_fPriceMargin"/>
+					<field name="x_fMarginSubtotal" readonly="1"/>
 				</xpath>
 
 				<!-- SALES, añadir presupuso relaciondo de oferta/facturación -->
@@ -55,9 +73,11 @@
 						<!-- 1.crear grupo 2.exportar el registro 3. renombrar ID externo a "ventas.aprobador_operaciones" -->
 						<!-- Settings_Technical_Sequences and Identifiers_External Identifiers -->
 						<!--  groups="ventas.aprobador_operaciones" -->
-						<field name="x_idOperationUser"/>
-						<field name="x_dtPOconfirm"/>
-						<field name="x_dtPOdone"/>
+						<field name="x_dtPOconfirm"	readonly="1"/>
+						<field name="x_dtPOformalize" readonly="1"/>
+						<field name="x_dtPOdone" readonly="1"/>
+						<field name="x_idOperationUser" attrs="{'readonly': [('state', '!=', 'sale')]}" states="sale,done"/>
+						<button name="start_manage" string="Formalizar" type="object" states="sale" attrs="{'readonly': [('x_dtPOformalize', '!=', False)]}"/>
 
 						<!-- FLOW: sale.order.basic -->
 						<!-- field name="x_datetimeApprovedByOperation"  attrs="{'readonly': [('user_id', '!=', 1)]}"/ -->
@@ -84,7 +104,7 @@
 				</xpath>
 				<xpath expr="/form/group/group/div/div/field[@name='fixed_price']" position="after">
 					<label for="x_fixed_price_provider" string="Precio Proveedor"/>
-					<field name="x_fixed_price_provider" widget="money" nolabel="0"/>
+					<field name="x_fixed_price_provider" widget="monetary" nolabel="0"/>
 				</xpath>
 			</field>
 		</record>

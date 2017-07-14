@@ -14,14 +14,84 @@ from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
 
-	x_dtPOconfirm		= fields.Datetime	(	string			= "F PV",			help	= "fecha de Pedido de Venta")
-	x_dtPOdone			= fields.Datetime	(	string			= "F PV Realizado",	help	= "fecha de Pedio de Venta Realizado")
-	x_idOperationUser	= fields.Many2one	(	comodel_name	= "res.users",		string	= "Responsable operación")
+	x_dtPOconfirm		= fields.Datetime	(	string			= "F Pedido de Venta",	help	= "fecha de Pedido de Venta")
+	x_dtPOformalize		= fields.Datetime	(	string			= "F Formalíazción",	help	= "fecha de Formalización de Pedido de Venta")
+	x_dtPOdone			= fields.Datetime	(	string			= "F Realizado",		help	= "fecha de Pedio de Venta Realizado")
+
+	x_idOperationUser	= fields.Many2one	(	comodel_name	= "res.users",
+												string			= "Responsable operación"
+												#default			= "_get_operation_user_default"
+											)
+
+	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
+	#propagar a toas las lineas de pedido
+	x_eProvider		= fields.Selection (
+											string		= "Proveedor",
+											selection 	= "get_providers",
+											inverse		= "on_provider_change",
+											required	= True
+											)
+
+
+	#_defaults = {
+	#	'x_idOperationUser': "_get_operation_user_default"
+	#}
 
 	x_fRevenue			= fields.Float		(	string				= 'Beneficio SETIR',
 												store				= True,
 												compute				= '_amount_all',
 												track_visibility	= 'always')
+
+
+	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
+	@api.one
+	@api.onchange('x_eProvider')
+	def on_provider_change ( self):
+		
+		for orderLine in self.order_line:
+			orderLine.x_eProvider = self.x_eProvider
+			orderLine.product_uom_change()
+
+
+	def get_providers (self):
+		providers = []
+		for partner in self.env['res.partner'].search([]):
+			if partner.is_company == True and partner.supplier == True:
+				providers.append ( ( str(partner.id), partner.name))
+
+		return providers
+
+	@api.model
+	def _get_operation_user_default ( self):
+		idOperationsManager	= self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.user_id.id
+		return self.env['res.users'].search([('id', '=', idOperationsManager)])[0].id
+
+	@api.one
+	def start_manage ( self):
+
+		self.x_dtPOformalize	= fields.Datetime.now()
+
+		#al responsable operaciones asignado
+		strMailTo = self.x_idOperationUser.email
+		#al comercial responsable
+		strMailCc = self.user_id.email + ", " + self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.work_email
+		
+		strName		= self.name
+
+		#strState	= str ( dict(self.fields_get(allfields=['state'])['state']['selection'])[order.state])
+		strUser		= self.x_idOperationUser.name
+
+		strNotification = "FT: [" + strName + "]: asignado para gestionar a [" + str ( strUser) + "]"
+
+		self.send_mail_note (
+								strMailTo,
+								strMailCc,
+								"sistemas@setir.es",
+								strNotification,
+								strNotification
+							)
+
+		self.message_post ( strNotification)
 
 	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
 	@api.model
@@ -58,22 +128,29 @@ class setirSaleOrder ( models.Model):
 	def action_done(self):
 		#self.write({'state': 'done'})
 		super ( setirSaleOrder, self).action_done()
+
 		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+
 		self.notify_work_flow( "PEDIDO DE VENTA - REALIZADO")
 
 	@api.multi
 	def action_cancel(self):
 		#self.write({'state': 'cancel'})
 		super ( setirSaleOrder, self).action_cancel()
-		self.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
-		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+
+		self.write ( {'x_dtPOconfirm' : 0})
+		self.write ( {'x_dtPOformalize' : 0})
+		self.write ( {'x_dtPOdone' : 0})
+
 		self.notify_work_flow( "CANCELADO")
 
 	@api.multi
 	def action_draft(self):
 		super ( setirSaleOrder, self).action_draft()
-		self.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
-		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+		self.write ( {'x_dtPOconfirm' : 0})
+		self.write ( {'x_dtPOformalize' : 0})
+		self.write ( {'x_dtPOdone' : 0})
+
 		self.notify_work_flow( "BORRADOR")
 
 	#manada correo al comercial y al resposable del departameinto de "operaciones"
@@ -94,7 +171,7 @@ class setirSaleOrder ( models.Model):
 		if order.user_id.name == False:
 			strUser = "consultar"
 
-		strNotification = "FT: orden [" + strName + "]: nuevo estado [" + strMsg + "] establecido por [" + strUser + "]"
+		strNotification = "FT: [" + strName + "]: estado [" + strMsg + "] establecido por [" + strUser + "]"
 
 		order.send_mail_note (
 								strMailTo,
@@ -138,14 +215,14 @@ class setirSaleOrder ( models.Model):
 			rRevenue = amount_untaxed = amount_tax = 0.0
 			for line in order.order_line:
 				amount_untaxed += line.price_subtotal
-				rRevenue += line.x_fPriceMargin * line.product_uom_qty
+				rRevenue += self.fix_porcentage (line.x_fPriceMargin, line.product_uom) * line.product_uom_qty
 				# FORWARDPORT UP TO 10.0
 				if order.company_id.tax_calculation_rounding_method == 'round_globally':
-					price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+					price = self.fix_porcentage ( line.price_unit * (1 - (line.discount or 0.0) / 100.0), line.product_uom)
 					taxes = line.tax_id.compute_all(price, line.order_id.currency_id, line.product_uom_qty, product=line.product_id, partner=line.order_id.partner_id)
-					amount_tax += sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
+					amount_tax += self.fix_porcentage ( sum(t.get('amount', 0.0) for t in taxes.get('taxes', [])), line.product_uom)
 				else:
-					amount_tax += line.price_tax
+					amount_tax += self.fix_porcentage ( line.price_tax, line.product_uom)
 			order.update({
 				'amount_untaxed': order.pricelist_id.currency_id.round(amount_untaxed),
 				'amount_tax': order.pricelist_id.currency_id.round(amount_tax),
@@ -153,12 +230,19 @@ class setirSaleOrder ( models.Model):
 				'x_fRevenue': self.pricelist_id.currency_id.round ( rRevenue)
 			})
 
+	#el precio los productos que tienen UOM de categoria "Porcentaje" se pone en porcientos
+	#es necesario convertirlo a euros, aqui em _amount_all(): price, price_tax y rRevenue
+	def fix_porcentage ( self, price, product_uom):
+		if product_uom.category_id.name == "Porcentaje":
+			price = price / 100.0
+		return price
 
 class setirSaleOrderLine ( models.Model):
 	_inherit = "sale.order.line"
 
-	x_fPriceMargin		= fields.Float ( string		= "MARGEN",	required	= True)
-	x_fPriceProvider	= fields.Float ( string		= "PRVDR",	required	= True,	inverse	= "on_price_provider_change")
+	x_fPriceProvider	= fields.Float ( string		= "COSTE",	required	= True,	inverse	= "on_price_provider_change")
+	x_fPriceMargin		= fields.Float ( string		= "MARG",	required	= True)
+	x_fMarginSubtotal	= fields.Float ( string		= "BENF",	required	= True)
 
 	x_strTarifa		= fields.Char ( string = "Tarifa", readonly = True)
 	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
@@ -177,17 +261,30 @@ class setirSaleOrderLine ( models.Model):
 
 		return providers
 
+
+	#el precio los productos que tienen UOM de categoria "Porcentaje" se pone en porcientos
+	#es necesario convertirlo a euros, aqui en product_id_change() y en product_uom_change: price_subtotal
+	def fix_porcentage ( self, price, product_uom):
+		if price != False and product_uom.category_id.name == "Porcentaje":
+			price = price / 100.0
+		return price
+
 	@api.one
 	@api.onchange('x_fPriceProvider')
 	def on_price_provider_change ( self):
 		self.x_fPriceMargin		= self.price_unit - self.x_fPriceProvider
+		self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
+		self.price_subtotal		= self.fix_porcentage ( self.price_unit, self.product_uom) * self.product_uom_qty
 
 	#sobreescrito para 'price_unit'
 	@api.depends('product_uom_qty', 'discount', 'price_unit', 'tax_id')
 	def _compute_amount(self):
-		for l in self:
-			l.x_fPriceMargin	= l.price_unit - l.x_fPriceProvider
 		super (setirSaleOrderLine, self)._compute_amount()
+		for line in self:
+			line.price_subtotal = line.fix_porcentage ( line.price_unit, line.product_uom) * line.product_uom_qty
+			line.x_fPriceMargin	= line.price_unit - line.x_fPriceProvider
+			line.x_fMarginSubtotal = line.fix_porcentage ( line.x_fPriceMargin, line.product_uom) * line.product_uom_qty
+
 
 	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
@@ -232,7 +329,9 @@ class setirSaleOrderLine ( models.Model):
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
+					self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
 					self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
+					self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 					break
 
 	@api.multi
@@ -287,15 +386,13 @@ class setirSaleOrderLine ( models.Model):
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
+					self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
 					self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
+					self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 					break
-
 
 		self.update(vals)
 		return {'domain': domain}
-
-
-
 
 class setirProductPricelist ( models.Model):
 	_inherit = "product.pricelist"
