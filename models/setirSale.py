@@ -47,7 +47,6 @@ class setirSaleOrder ( models.Model):
 	@api.one
 	@api.onchange('x_eProvider')
 	def on_provider_change ( self):
-		
 		for orderLine in self.order_line:
 			orderLine.x_eProvider = self.x_eProvider
 			orderLine.product_uom_change()
@@ -67,7 +66,7 @@ class setirSaleOrder ( models.Model):
 		return self.env['res.users'].search([('id', '=', idOperationsManager)])[0].id
 
 	@api.one
-	def start_manage ( self):
+	def firmalize ( self):
 
 		self.x_dtPOformalize	= fields.Datetime.now()
 
@@ -81,7 +80,7 @@ class setirSaleOrder ( models.Model):
 		#strState	= str ( dict(self.fields_get(allfields=['state'])['state']['selection'])[order.state])
 		strUser		= self.x_idOperationUser.name
 
-		strNotification = "FT: [" + strName + "]: asignado para gestionar a [" + str ( strUser) + "]"
+		strNotification = "FT: [" + strName + "]: asignado para su formalización a [" + str ( strUser) + "]"
 
 		self.send_mail_note (
 								strMailTo,
@@ -117,7 +116,7 @@ class setirSaleOrder ( models.Model):
 			#codigo setir *****************************************************
 			#order.x_dtPOconfirmed	= fields.Datetime.now()
 			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
-			order.notify_work_flow( "PEDIDO DE VENTA - VENTA CONFIRMADA")
+			order.notify_work_flow( "PEDIDO DE VENTA")
 			#fin codigo setir *************************************************
 
 		if self.env['ir.values'].get_default('sale.config.settings', 'auto_done_setting'):
@@ -218,6 +217,7 @@ class setirSaleOrder ( models.Model):
 				rRevenue += self.fix_porcentage (line.x_fPriceMargin, line.product_uom) * line.product_uom_qty
 				# FORWARDPORT UP TO 10.0
 				if order.company_id.tax_calculation_rounding_method == 'round_globally':
+					#price = self.fix_porcentage ( line.price_unit * (1 - (line.discount or 0.0) / 100.0), line.product_uom)
 					price = self.fix_porcentage ( line.price_unit * (1 - (line.discount or 0.0) / 100.0), line.product_uom)
 					taxes = line.tax_id.compute_all(price, line.order_id.currency_id, line.product_uom_qty, product=line.product_id, partner=line.order_id.partner_id)
 					amount_tax += self.fix_porcentage ( sum(t.get('amount', 0.0) for t in taxes.get('taxes', [])), line.product_uom)
@@ -240,27 +240,46 @@ class setirSaleOrder ( models.Model):
 class setirSaleOrderLine ( models.Model):
 	_inherit = "sale.order.line"
 
-	x_fPriceProvider	= fields.Float ( string		= "COSTE",	required	= True,	inverse	= "on_price_provider_change")
-	x_fPriceMargin		= fields.Float ( string		= "MARG",	required	= True)
-	x_fMarginSubtotal	= fields.Float ( string		= "BENF",	required	= True)
+	x_fPriceProvider	= fields.Float (	string		= "COSTE",
+											required	= True,
+											inverse	= "on_price_provider_change"
+										)
+
+	x_fPriceMargin		= fields.Float (	string		= "MARG",
+											compute		= "compute_price_margin",
+											readonly = True
+										)
+	x_fMarginSubtotal	= fields.Float (	string		= "BENF",
+											compute = "compute_margin_subtotal",
+											readonly = True
+											)
 
 	x_strTarifa		= fields.Char ( string = "Tarifa", readonly = True)
 	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
 	x_eProvider		= fields.Selection (
 											string		= "Proveedor",
 											selection 	= "get_providers",
-											inverse		= "product_uom_change",
-											required	= True
+											inverse		= "product_uom_change"
 											)
+
+
+	#los campos compute por defecto se calculan al mostrar la vista y al salvar los cambios
+	#para forzar la dependencia del cambio de otros campos
+	@api.one
+	@api.depends('price_unit', 'x_fPriceProvider')
+	def compute_price_margin ( self):
+		self.x_fPriceMargin = self.price_unit - self.x_fPriceProvider
+	@api.one
+	@api.depends('price_unit', 'x_fPriceProvider', 'product_uom_qty')
+	def compute_margin_subtotal ( self):
+		self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 
 	def get_providers (self):
 		providers = []
 		for partner in self.env['res.partner'].search([]):
 			if partner.is_company == True and partner.supplier == True:
 				providers.append ( ( str(partner.id), partner.name))
-
 		return providers
-
 
 	#el precio los productos que tienen UOM de categoria "Porcentaje" se pone en porcientos
 	#es necesario convertirlo a euros, aqui en product_id_change() y en product_uom_change: price_subtotal
@@ -272,8 +291,6 @@ class setirSaleOrderLine ( models.Model):
 	@api.one
 	@api.onchange('x_fPriceProvider')
 	def on_price_provider_change ( self):
-		self.x_fPriceMargin		= self.price_unit - self.x_fPriceProvider
-		self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 		self.price_subtotal		= self.fix_porcentage ( self.price_unit, self.product_uom) * self.product_uom_qty
 
 	#sobreescrito para 'price_unit'
@@ -282,11 +299,11 @@ class setirSaleOrderLine ( models.Model):
 		super (setirSaleOrderLine, self)._compute_amount()
 		for line in self:
 			line.price_subtotal = line.fix_porcentage ( line.price_unit, line.product_uom) * line.product_uom_qty
-			line.x_fPriceMargin	= line.price_unit - line.x_fPriceProvider
-			line.x_fMarginSubtotal = line.fix_porcentage ( line.x_fPriceMargin, line.product_uom) * line.product_uom_qty
+			#line.x_fPriceMargin	= line.price_unit - line.x_fPriceProvider
+			#line.x_fMarginSubtotal = line.fix_porcentage ( line.x_fPriceMargin, line.product_uom) * line.product_uom_qty
 
 
-	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
+	#se sobreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
 	@api.onchange('product_uom', 'product_uom_qty', 'x_eProvider')
 	def product_uom_change ( self):
@@ -297,7 +314,7 @@ class setirSaleOrderLine ( models.Model):
 		#limpiar de los datos anteriores
 		self.x_strTarifa		= "sin tarifa"
 		self.x_fPriceProvider	= 0.0
-		self.x_fPriceMargin		= 0.0
+		#self.x_fPriceMargin		= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
 		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
@@ -329,9 +346,9 @@ class setirSaleOrderLine ( models.Model):
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
-					self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
-					self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
-					self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
+					#self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
+					#self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
+					#self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 					break
 
 	@api.multi
@@ -341,9 +358,10 @@ class setirSaleOrderLine ( models.Model):
 			return {'domain': {'product_uom': []}}
 
 		#limpiar de los datos anteriores
-		self.x_strTarifa		= "sin tarifa"
+		self.x_strTarifa		= "siN tarifa"
 		self.x_fPriceProvider	= 0.0
-		self.x_fPriceMargin		= 0.0
+		#self.x_fPriceMargin		= 0.0
+
 		#obtener tarifa en función del proveedor y producto selecccionados
 		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
 		if not rsTarifas:
@@ -386,9 +404,9 @@ class setirSaleOrderLine ( models.Model):
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
-					self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
-					self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
-					self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
+					#self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
+					#self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
+					#self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 					break
 
 		self.update(vals)
@@ -408,9 +426,9 @@ class setirProductPricelist ( models.Model):
 
 	@api.onchange('x_idPartner')
 	def partner_change ( self):
-		self.x_partner_id = self.x_idPartner.id
+		self.x_partner_id = int ( self.x_idPartner.id)
 
 class setirProductPricelistItem ( models.Model):
 	_inherit = "product.pricelist.item"
 
-	x_fixed_price_provider	= fields.Float ( string = "Proveedor")
+	x_fixed_price_provider	= fields.Float ( string = "Coste")
