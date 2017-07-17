@@ -90,16 +90,12 @@
 						<!-- 1.crear grupo 2.exportar el registro 3. renombrar ID externo a "ventas.aprobador_operaciones" -->
 						<!-- Settings_Technical_Sequences and Identifiers_External Identifiers -->
 						<!--  groups="ventas.aprobador_operaciones" -->
-						<group>
-							<field name="create_date" readonly="1"/>
-							<field name="x_dtPOconfirm" readonly="1"/>
-							<field name="x_dtPOformalize" readonly="1"/>
-							<field name="x_dtPOdone" readonly="1"/>
-						</group>
-						<group>
-							<field name="x_idOperationUser" attrs="{'readonly': [('state', '!=', 'sale')]}" states="sale,done"/>
-							<button name="formalize" string="Formalizar" type="object" states="sale" attrs="{'readonly': [('x_dtPOformalize', '!=', False)]}"/>
-						</group>
+						<field name="create_date" readonly="1"/>
+						<field name="x_dtPOconfirm" readonly="1"/>
+						<field name="x_dtPOformalize" readonly="1"/>
+						<field name="x_dtPOdone" readonly="1"/>
+						<field name="x_idOperationUser" attrs="{'readonly': [('state', '!=', 'sale')]}" states="sale,done"/>
+						<button name="formalize" string="Formalizar" type="object" states="sale" attrs="{'readonly': [('x_dtPOformalize', '!=', False)]}"/>
 						<!-- FLOW: sale.order.basic -->
 						<!-- field name="x_datetimeApprovedByOperation"  attrs="{'readonly': [('user_id', '!=', 1)]}"/ -->
 						<!-- button name="wfa_aprobar_por_operaciones" string="Aprobar" type="object" groups="ventas.aprobador_operaciones" attrs="{'invisible': [('state' , '!=', 'sale')]}"/ -->
