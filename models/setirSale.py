@@ -314,17 +314,14 @@ class setirSaleOrderLine ( models.Model):
 		#limpiar de los datos anteriores
 		self.x_strTarifa		= "sin tarifa"
 		self.x_fPriceProvider	= 0.0
-		#self.x_fPriceMargin		= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
 		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
 		if not rsTarifas:
 			self.price_unit = 0.0
 			return
-		#idTarifa			= 0
 		for tarifa in rsTarifas:
 			if self.product_id == tarifa.item_ids[0].product_id:
-				#idTarifa			= tarifa.id
 				self.x_strTarifa	= tarifa.name
 				break
 
@@ -346,9 +343,6 @@ class setirSaleOrderLine ( models.Model):
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
-					#self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
-					#self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
-					#self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 					break
 
 	@api.multi
@@ -360,7 +354,6 @@ class setirSaleOrderLine ( models.Model):
 		#limpiar de los datos anteriores
 		self.x_strTarifa		= "siN tarifa"
 		self.x_fPriceProvider	= 0.0
-		#self.x_fPriceMargin		= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
 		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
@@ -368,10 +361,8 @@ class setirSaleOrderLine ( models.Model):
 			self.price_unit = 0.0
 			return {'domain': {'product_uom': []}}
 
-		#idTarifa			= 0
 		for tarifa in rsTarifas:
 			if self.product_id == tarifa.item_ids[0].product_id:
-				#idTarifa			= tarifa.id
 				self.x_strTarifa	= tarifa.name
 				break
 
@@ -404,9 +395,6 @@ class setirSaleOrderLine ( models.Model):
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
-					#self.price_subtotal		= self.fix_porcentage ( self.price_subtotal, self.product_uom)
-					#self.x_fPriceMargin		= self.price_unit - item.x_fixed_price_provider
-					#self.x_fMarginSubtotal	= self.fix_porcentage ( self.x_fPriceMargin, self.product_uom) * self.product_uom_qty
 					break
 
 		self.update(vals)
