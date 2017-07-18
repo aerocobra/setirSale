@@ -65,7 +65,8 @@ class setirSaleOrder ( models.Model):
 
 	@api.one
 	def formalize ( self):
-
+		if self.x_dtPOformalize != False or self.x_idOperationUser == False:
+			return
 		self.x_dtPOformalize	= fields.Datetime.now()
 
 		#al responsable operaciones asignado
