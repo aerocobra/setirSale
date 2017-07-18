@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
-# -*- setirSale.py
+# setirSale.py
 from openerp import tools
 from pygments.lexer import _inherit
 
