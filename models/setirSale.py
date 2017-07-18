@@ -78,7 +78,7 @@ class setirSaleOrder ( models.Model):
 		#strState	= str ( dict(self.fields_get(allfields=['state'])['state']['selection'])[order.state])
 		strUser		= self.x_idOperationUser.name
 
-		strNotification = "FT: [" + strName + "]: asignado para su formalización a [" + str ( strUser) + "]"
+		strNotification = "FT: [" + strName + u"]: asignado para su formalización a [" + str ( strUser) + "]"
 
 		self.send_mail_note (
 								strMailTo,
