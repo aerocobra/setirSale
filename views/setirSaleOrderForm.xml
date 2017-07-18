@@ -95,7 +95,7 @@
 						<field name="x_dtPOformalize" readonly="1"/>
 						<field name="x_dtPOdone" readonly="1"/>
 						<field name="x_idOperationUser" attrs="{'readonly': [('state', '!=', 'sale')]}" states="sale,done"/>
-						<button name="formalize" string="Formalizar" type="object" states="sale" attrs="{'invisible': [('x_dtPOformalize', '!=', False)]}"/>
+						<button name="formalize" string="Formalizar" type="object" states="sale"/>
 						<!-- FLOW: sale.order.basic -->
 						<!-- field name="x_datetimeApprovedByOperation"  attrs="{'readonly': [('user_id', '!=', 1)]}"/ -->
 						<!-- button name="wfa_aprobar_por_operaciones" string="Aprobar" type="object" groups="ventas.aprobador_operaciones" attrs="{'invisible': [('state' , '!=', 'sale')]}"/ -->
