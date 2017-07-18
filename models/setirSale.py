@@ -4,12 +4,12 @@
 from openerp import tools
 from pygments.lexer import _inherit
 
-from datetime import datetime, timedelta
-from openerp import SUPERUSER_ID
-from openerp import api, fields, models, _
+#from datetime import datetime, timedelta
+#from openerp import SUPERUSER_ID
+from openerp import api, fields, models
 import openerp.addons.decimal_precision as dp
-from openerp.exceptions import UserError
-from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
+#from openerp.exceptions import UserError
+#from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
@@ -54,9 +54,8 @@ class setirSaleOrder ( models.Model):
 
 	def get_providers (self):
 		providers = []
-		for partner in self.env['res.partner'].search([]):
-			if partner.is_company == True and partner.supplier == True:
-				providers.append ( ( str(partner.id), partner.name))
+		for partner in self.env['res.partner'].search([('is_company','=', True), ( 'supplier', '=', True)]):
+			providers.append ( ( str(partner.id), partner.name))
 
 		return providers
 
@@ -276,9 +275,8 @@ class setirSaleOrderLine ( models.Model):
 
 	def get_providers (self):
 		providers = []
-		for partner in self.env['res.partner'].search([]):
-			if partner.is_company == True and partner.supplier == True:
-				providers.append ( ( str(partner.id), partner.name))
+		for partner in self.env['res.partner'].search([('is_company','=', True), ( 'supplier', '=', True)]):
+			providers.append ( ( str(partner.id), partner.name))
 		return providers
 
 	#el precio los productos que tienen UOM de categoria "Porcentaje" se pone en porcientos
