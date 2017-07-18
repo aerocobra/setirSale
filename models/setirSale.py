@@ -4,12 +4,12 @@
 from openerp import tools
 from pygments.lexer import _inherit
 
-#from datetime import datetime, timedelta
-#from openerp import SUPERUSER_ID
+from datetime import datetime, timedelta
+from openerp import SUPERUSER_ID
 from openerp import api, fields, models
 import openerp.addons.decimal_precision as dp
-#from openerp.exceptions import UserError
-#from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
+from openerp.exceptions import UserError
+from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
