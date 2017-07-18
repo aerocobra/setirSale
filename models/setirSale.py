@@ -65,7 +65,7 @@ class setirSaleOrder ( models.Model):
 		return self.env['res.users'].search([('id', '=', idOperationsManager)])[0].id
 
 	@api.one
-	def firmalize ( self):
+	def formalize ( self):
 
 		self.x_dtPOformalize	= fields.Datetime.now()
 
