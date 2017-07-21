@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+	<data>
+		<report id="setirSaleTimespanReport_action"
+			string="Tiempos ejecución"
+			model="sale.order"
+			report_type="qweb-pdf"
+            file="setirSale.setirSaleTimespanReport"
+			name="setirSale.setirSaleTimespanReport"
+		/>
+		<template id="setirSaleTimespanReport">
+			<t t-call="report.html_container">
+				<t t-foreach="docs" t-as="doc">
+					<span t-field="doc.name"/>
+				</t>
+			</t>
+		</template>
+	</data>
+</openerp>

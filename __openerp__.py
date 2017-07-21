@@ -51,6 +51,7 @@
 		"views/setirSaleOrderForm.xml",
 		"data/data.xml",
 		"reports/setirOfertaReport.xml",
+		"reports/setirSaleTimespanReport.xml",
     ],
     "installable": True,
     "application": True,
