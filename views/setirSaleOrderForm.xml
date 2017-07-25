@@ -24,37 +24,49 @@
 					<!-- periodos en curso -->
 					<!-- domain="[('x_dtPOdone','&lt;=', (context_today() + relativedelta(weeks=0,day=7, weekday=-1)).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=2, weekday=0)).strftime('%Y-%m-%d'))]" -->
 					<separator/>
-					<filter string="semana en curso"
+					<filter string="hoy"
+							domain="[('date','&lt;=', (datetime.date.today()).strftime('%Y-%m-%d')),('date','&gt;=',(datetime.date.today()).strftime('%Y-%m-%d'))]"
+							help="Pedidos realizados hoy"
+					/>
+					<filter string="esta semana"
 							name="order_current_week"
 							domain="[('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=1, weekday=0)).strftime('%Y-%m-%d'))]"
+							help="Pedidos realizados esta semana"
 					/>
-					<filter string="mes en curso"
+					<filter string="este mes"
 							name="order_current_month"
 							domain="[('x_dtPOdone','&lt;=',(datetime.date.today()+relativedelta(day=31)).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(datetime.date.today()-relativedelta(day=1)).strftime('%Y-%m-%d'))]"
-							help="Current Month"
+							help="Pedidos realizados este mes"
 					/>
-					<filter string="año en curso"
+					<filter string="este año"
 							name="order_current_year"
-							domain="[('x_dtPOdone','&lt;=', time.strftime('%%Y-12-31')),('x_dtPOdone','&gt;=',time.strftime('%%Y-01-01'))]"/>
+							domain="[('x_dtPOdone','&lt;=', time.strftime('%%Y-12-31')),('x_dtPOdone','&gt;=',time.strftime('%%Y-01-01'))]"
+							help="Pedidos realizados este año"
+					/>
 					<!-- periodos pasados -->
 					<separator/>
 					<filter string="semana pasada"
 							name="order_last_week"
 							domain="[('x_dtPOdone', '&gt;=', ((context_today()+relativedelta(weeks=-2, days=1, weekday=0)).strftime('%Y-%m-%d'))),('x_dtPOdone', '&lt;=', ((context_today()+relativedelta(weeks=-1,weekday=6)).strftime('%Y-%m-%d')))]"
+							help="Pedidos realizados la semana pasada"
 					/>
 					<filter string="mes pasado"
 							name="order_last_month"
 							domain="[('x_dtPOdone','&gt;=',(context_today()-relativedelta(months=1)).strftime('%Y-%m-01')),('x_dtPOdone','&lt;',time.strftime('%Y-%m-01'))]"
+							help="Pedidos realizados el mes pasado"
 					/>
 					<filter string="año pasado"
 							name="order_last_month"
 							domain="[('x_dtPOdone','&gt;=',(context_today()-relativedelta(years=1)).strftime('%Y-01-01')),('x_dtPOdone','&lt;',(context_today()-relativedelta(years=1)).strftime('%Y-12-31'))]"
+							help="Pedidos realizados el año pasado"
 					/>
 				</search>
 			</field>
 		</record>
 	</data>
 	<data>
+		<!-- ATENCION  -->
+		<!-- quitar opportuniti_id desde la vista heredad en el formulario, en otro caso este dato no se muestra en el mimo campo añadido aqui -->
 		<!-- For the form view and id field (whatever) -->
 		<record model="ir.ui.view" id="setirSaleOrderForm">
 			<!-- Name field (whatever) -->
@@ -123,7 +135,7 @@
 					<field name="x_fMarginSubtotal"/>
 				</xpath>
 
-				<!-- SALES, añadir presupuso relaciondo de oferta/facturación -->
+				<!-- SALES, añadir oportunidad relacionda -->
 				<xpath expr="/form/sheet/notebook/page/group/group/field[@name='user_id']" position="before">
 					<field name="opportunity_id" context="{'default_groups_ref': ['base.group_user', 'base.group_partner_manager', 'account.group_account_invoice', 'base.group_sale_salesman_all_leads']}"/>
 				</xpath>
