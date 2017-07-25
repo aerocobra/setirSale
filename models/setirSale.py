@@ -41,6 +41,20 @@ class setirSaleOrder ( models.Model):
 												compute				= '_amount_all',
 												track_visibility	= 'always')
 
+	@api.multi
+	def print_sale_report_one(self):
+
+		""" Print the invoice and mark it as sent, so that we can see more
+
+		  easily the next step of the workflow
+
+		 """
+
+		#assert len(self) == 1, 'This option should only be used for a single id at a time.'
+		
+		#self.sent = True
+
+		return self.env['report'].get_action(self, 'setirSale.setirSaleTimespanReport')
 
 	def print_sale_report (self):
 		attachment_obj = self.env['ir.attachment']
