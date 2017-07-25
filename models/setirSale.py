@@ -42,6 +42,33 @@ class setirSaleOrder ( models.Model):
 												track_visibility	= 'always')
 
 
+	def print_sale_report (self):
+		attachment_obj = self.env['ir.attachment']
+		for record in self.search([]):
+			ir_actions_report = self.env['ir.actions.report.xml']
+			matching_reports = ir_actions_report.search([('report_name','=','setirSale.setirSaleTimespanReport')])
+			if matching_reports:
+				report = matching_reports[0]
+				report_service = 'report.' + report.report_name
+				service = netsvc.LocalService(report_service)
+				(result, format) = service.create([record.id], {'model': self._name}, context=context)
+				eval_context = {'time': time, 'object': record}
+				if not report.attachment or not eval(report.attachment, eval_context):
+					# no auto-saving of report as attachment, need to do it manually
+					result = base64.b64encode(result)
+					file_name = re.sub(r'[^a-zA-Z0-9_-]', '_', 'tempoEXXXX')
+					file_name += ".pdf"
+					attachment_id = attachment_obj.create(cr, uid,
+						{
+							'name': file_name,
+							'datas': result,
+							'datas_fname': file_name,
+							'res_model': self._name,
+							'res_id': record.id,
+							'type': 'binary'
+						}, context=context)
+		return True
+
 	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
 	@api.onchange('x_eProvider')

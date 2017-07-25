@@ -10,6 +10,51 @@
 		</record>
 	</data -->
 	<data>
+		<!-- search view for the report-->
+		<record model="ir.ui.view" id="setirSaleSearch_form">
+			<field name="name">setirSaleSearch_form</field>
+			<field name="model">sale.order</field>
+			<field name="inherit_id" ref="sale.view_sales_order_filter"/>
+			<field name="arch" type="xml">
+				<search>
+					<!-- filter name="last_week" string="Utima semana" domain="[('date_order','<',datetime.datetime.now().strftime('%Y-%m-%d'))]"/ -->
+					<filter string="creado útimos 10 dias"
+							domain="[('date_order','>=',(datetime.date.today()- datetime.timedelta(days=10)).strftime('%%Y-%%m-%%d 00:00:00'))]"
+					/>
+					<!-- periodos en curso -->
+					<!-- domain="[('x_dtPOdone','&lt;=', (context_today() + relativedelta(weeks=0,day=7, weekday=-1)).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=2, weekday=0)).strftime('%Y-%m-%d'))]" -->
+					<separator/>
+					<filter string="semana en curso"
+							name="order_current_week"
+							domain="[('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=1, weekday=0)).strftime('%Y-%m-%d'))]"
+					/>
+					<filter string="mes en curso"
+							name="order_current_month"
+							domain="[('x_dtPOdone','&lt;=',(datetime.date.today()+relativedelta(day=31)).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(datetime.date.today()-relativedelta(day=1)).strftime('%Y-%m-%d'))]"
+							help="Current Month"
+					/>
+					<filter string="año en curso"
+							name="order_current_year"
+							domain="[('x_dtPOdone','&lt;=', time.strftime('%%Y-12-31')),('x_dtPOdone','&gt;=',time.strftime('%%Y-01-01'))]"/>
+					<!-- periodos pasados -->
+					<separator/>
+					<filter string="semana pasada"
+							name="order_last_week"
+							domain="[('x_dtPOdone', '&gt;=', ((context_today()+relativedelta(weeks=-2, days=1, weekday=0)).strftime('%Y-%m-%d'))),('x_dtPOdone', '&lt;=', ((context_today()+relativedelta(weeks=-1,weekday=6)).strftime('%Y-%m-%d')))]"
+					/>
+					<filter string="mes pasado"
+							name="order_last_month"
+							domain="[('x_dtPOdone','&gt;=',(context_today()-relativedelta(months=1)).strftime('%Y-%m-01')),('x_dtPOdone','&lt;',time.strftime('%Y-%m-01'))]"
+					/>
+					<filter string="año pasado"
+							name="order_last_month"
+							domain="[('x_dtPOdone','&gt;=',(context_today()-relativedelta(years=1)).strftime('%Y-01-01')),('x_dtPOdone','&lt;',(context_today()-relativedelta(years=1)).strftime('%Y-12-31'))]"
+					/>
+				</search>
+			</field>
+		</record>
+	</data>
+	<data>
 		<!-- For the form view and id field (whatever) -->
 		<record model="ir.ui.view" id="setirSaleOrderForm">
 			<!-- Name field (whatever) -->
@@ -90,7 +135,7 @@
 						<!-- 1.crear grupo 2.exportar el registro 3. renombrar ID externo a "ventas.aprobador_operaciones" -->
 						<!-- Settings_Technical_Sequences and Identifiers_External Identifiers -->
 						<!--  groups="ventas.aprobador_operaciones" -->
-						<field name="create_date" readonly="1"/>
+						<field name="date_order" readonly="1"/>
 						<field name="x_dtPOconfirm" readonly="1"/>
 						<field name="x_dtPOformalize" readonly="1"/>
 						<field name="x_dtPOdone" readonly="1"/>
