@@ -25,12 +25,12 @@
 					<!-- domain="[('x_dtPOdone','&lt;=', (context_today() + relativedelta(weeks=0,day=7, weekday=-1)).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=2, weekday=0)).strftime('%Y-%m-%d'))]" -->
 					<separator/>
 					<filter string="hoy"
-							domain="[('date','&lt;=', (datetime.date.today()).strftime('%Y-%m-%d')),('date','&gt;=',(datetime.date.today()).strftime('%Y-%m-%d'))]"
+							domain="[('x_dtPOdone','&lt;=', (datetime.date.today()).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(datetime.date.today()).strftime('%Y-%m-%d'))]"
 							help="Pedidos realizados hoy"
 					/>
 					<filter string="esta semana"
 							name="order_current_week"
-							domain="[('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=1, weekday=0)).strftime('%Y-%m-%d'))]"
+							domain="[('x_dtPOdone','&gt;=',(context_today() - relativedelta(weeks=1, weekday=6)).strftime('%Y-%m-%d'))]"
 							help="Pedidos realizados esta semana"
 					/>
 					<filter string="este mes"
