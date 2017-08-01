@@ -87,9 +87,9 @@ class setirSaleOrder ( models.Model):
 	@api.one
 	@api.onchange('x_eProvider')
 	def on_provider_change ( self):
-		for orderLine in self.order_line:
-			orderLine.x_eProvider = self.x_eProvider
-			orderLine.product_uom_change()
+		for line in self.order_line:
+			line.x_eProvider = self.x_eProvider
+			line.product_uom_change()
 
 
 	def get_providers (self):
@@ -244,7 +244,7 @@ class setirSaleOrder ( models.Model):
 			mail_pool.send([msg_id])
 
 	#sobreescrito para rRevenue
-	@api.one
+	#@api.one
 	@api.depends('order_line.price_total')
 	def _amount_all(self):
 		"""
@@ -263,11 +263,13 @@ class setirSaleOrder ( models.Model):
 					amount_tax += self.fix_porcentage ( sum(t.get('amount', 0.0) for t in taxes.get('taxes', [])), line.product_uom)
 				else:
 					amount_tax += self.fix_porcentage ( line.price_tax, line.product_uom)
+
+			#order.x_fRevenue = rRevenue
 			order.update({
 				'amount_untaxed': order.pricelist_id.currency_id.round(amount_untaxed),
 				'amount_tax': order.pricelist_id.currency_id.round(amount_tax),
 				'amount_total': amount_untaxed + amount_tax,
-				'x_fRevenue': self.pricelist_id.currency_id.round ( rRevenue)
+				'x_fRevenue': order.pricelist_id.currency_id.round ( rRevenue)
 			})
 
 	#el precio los productos que tienen UOM de categoria "Porcentaje" se pone en porcientos
@@ -359,12 +361,19 @@ class setirSaleOrderLine ( models.Model):
 		if not rsTarifas:
 			self.price_unit = 0.0
 			return
+
 		for tarifa in rsTarifas:
 			if self.product_id == tarifa.item_ids[0].product_id:
 				self.x_strTarifa	= tarifa.name
 				break
 
 		if tarifa.id and self.order_id.partner_id:
+			#si este for esta al final, no funciona bien la primera vez
+			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
+				if self.product_uom_qty >= item.min_quantity:
+					self.x_fPriceProvider	= item.x_fixed_price_provider
+					break
+
 			product	= self.product_id.with_context	(
 														lang			= self.order_id.partner_id.lang,
 														partner			= self.order_id.partner_id.id,
@@ -379,10 +388,6 @@ class setirSaleOrderLine ( models.Model):
 
 			self.price_unit = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
 
-			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
-				if self.product_uom_qty >= item.min_quantity:
-					self.x_fPriceProvider	= item.x_fixed_price_provider
-					break
 
 	@api.multi
 	@api.onchange('product_id')
@@ -430,11 +435,11 @@ class setirSaleOrderLine ( models.Model):
 		self._compute_tax_id()
 
 		if self.order_id.pricelist_id and self.order_id.partner_id:
-			vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
 			for item in tarifa.item_ids.sorted ( key = lambda x: x.min_quantity, reverse = True):
 				if self.product_uom_qty >= item.min_quantity:
 					self.x_fPriceProvider	= item.x_fixed_price_provider
 					break
+			vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
 
 		self.update(vals)
 		return {'domain': domain}
