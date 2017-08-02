@@ -13,6 +13,15 @@ from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
 
+	#sobreescrito para cambiar readonly a False, es necesario para poder hacer actualizacioones desde CSV al importar este campo
+	state = fields.Selection([
+		('draft', 'Quotation'),
+		('sent', 'Quotation Sent'),
+		('sale', 'Sale Order'),
+		('done', 'Done'),
+		('cancel', 'Cancelled'),
+		], string='Status', readonly=False, copy=False, index=True, track_visibility='onchange', default='draft')
+
 	x_dtPOconfirm		= fields.Datetime	(	string			= "F Pedido de Venta",	help	= "fecha de Pedido de Venta")
 	x_dtPOformalize		= fields.Datetime	(	string			= "F Formalíazción",	help	= "fecha de Formalización de Pedido de Venta")
 	x_dtPOdone			= fields.Datetime	(	string			= "F Realizado",		help	= "fecha de Pedio de Venta Realizado")
