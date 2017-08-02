@@ -36,8 +36,8 @@ class setirSaleOrder ( models.Model):
 	x_eProvider		= fields.Selection (
 											string		= "Proveedor",
 											selection 	= "get_providers",
-											inverse		= "on_provider_change",
-											required	= True
+											inverse		= "on_provider_change"
+											#required	= True ...NOTA: activarlo al terminar los PV antiguos
 											)
 
 
