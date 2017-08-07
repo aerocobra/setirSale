@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-# setirSale.py
+#setirSale.py
+import openerp.addons.decimal_precision as dp
+from openerp import api, fields, models
 from openerp import tools
 from pygments.lexer import _inherit
-
 from datetime import datetime, timedelta
 from openerp import SUPERUSER_ID
-from openerp import api, fields, models
-import openerp.addons.decimal_precision as dp
 from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 
@@ -50,6 +49,11 @@ class setirSaleOrder ( models.Model):
 												compute				= '_amount_all',
 												track_visibility	= 'always')
 
+	x_fOrderRisk	= fields.Float	(	string				= 'Riesgo',
+										store				= True,
+										compute				= '_amount_all',
+										track_visibility	= 'always')
+
 	@api.multi
 	def print_sale_report_one(self):
 
@@ -91,6 +95,53 @@ class setirSaleOrder ( models.Model):
 							'type': 'binary'
 						}, context=context)
 		return True
+
+	#se sobreescribe para poner la oportubidad correspondiente al estado "Propuesta"
+	# se reproduce todo_ el codigo inicial con incersión de
+	@api.multi
+	def action_quotation_send(self):
+			'''
+			This function opens a window to compose an email, with the edi sale template message loaded by default
+			'''
+
+			self.ensure_one()
+			ir_model_data = self.env['ir.model.data']
+			try:
+				template_id = ir_model_data.get_object_reference('sale', 'email_template_edi_sale')[1]
+			except ValueError:
+				template_id = False
+			try:
+				compose_form_id = ir_model_data.get_object_reference('mail', 'email_compose_message_wizard_form')[1]
+			except ValueError:
+				compose_form_id = False
+			ctx = dict()
+			ctx.update({
+				'default_model': 'sale.order',
+				'default_res_id': self.ids[0],
+				'default_use_template': bool(template_id),
+				'default_template_id': template_id,
+				'default_composition_mode': 'comment',
+				'mark_so_as_sent': True
+			})
+			#BEGIN INSERT
+			#por defecto en ODOO:
+			#id_externo: crm.stage_lead3, id:3, name:  Propuesta
+			#verificar en las etapas que hay solo una Propuesta
+			stg = self.env['crm.stage'].search([('name', '=', 'Propuesta')])
+			if stg:
+				for order in self:
+					order.opportunity_id.stage_id = stg[0].id
+			#END INSERT
+			return {
+				'type': 'ir.actions.act_window',
+				'view_type': 'form',
+				'view_mode': 'form',
+				'res_model': 'mail.compose.message',
+				'views': [(compose_form_id, 'form')],
+				'view_id': compose_form_id,
+				'target': 'new',
+				'context': ctx,
+			}
 
 	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
@@ -261,8 +312,10 @@ class setirSaleOrder ( models.Model):
 		"""
 		for order in self:
 			rRevenue = amount_untaxed = amount_tax = 0.0
+			fRiisk = 0.0
 			for line in order.order_line:
 				amount_untaxed += line.price_subtotal
+				fRiisk += line.get_line_risk()
 				rRevenue += self.fix_porcentage (line.x_fPriceMargin, line.product_uom) * line.product_uom_qty
 				# FORWARDPORT UP TO 10.0
 				if order.company_id.tax_calculation_rounding_method == 'round_globally':
@@ -278,7 +331,8 @@ class setirSaleOrder ( models.Model):
 				'amount_untaxed': order.pricelist_id.currency_id.round(amount_untaxed),
 				'amount_tax': order.pricelist_id.currency_id.round(amount_tax),
 				'amount_total': amount_untaxed + amount_tax,
-				'x_fRevenue': order.pricelist_id.currency_id.round ( rRevenue)
+				'x_fRevenue': order.pricelist_id.currency_id.round ( rRevenue),
+				'x_fOrderRisk': order.pricelist_id.currency_id.round ( fRiisk)
 			})
 
 	#el precio los productos que tienen UOM de categoria "Porcentaje" se pone en porcientos
@@ -313,6 +367,20 @@ class setirSaleOrderLine ( models.Model):
 											inverse		= "product_uom_change"
 											)
 
+	def get_line_risk ( self):
+		risk_amount		= 0.0
+		line_product	= self.product_id
+		risk_products	= self.env['risk.product'].search ([('x_idProduct', '=', line_product.id)])
+		if risk_products:
+			if risk_products[0].x_bVolume:
+				risk_amount += self.product_uom_qty
+			if risk_products[0].x_bUntaxed:
+				risk_amount += self.price_subtotal
+
+			risk_amount	= risk_amount / risk_products[0].x_nPeriod
+			risk_amount = risk_amount * risk_products[0].x_fFactor
+
+		return risk_amount
 
 	#los campos compute por defecto se calculan al mostrar la vista y al salvar los cambios
 	#para forzar la dependencia del cambio de otros campos

@@ -35,7 +35,8 @@
 					/>
 					<filter string="este mes"
 							name="order_current_month"
-							domain="[('x_dtPOdone','&lt;=',(datetime.date.today()+relativedelta(day=31)).strftime('%Y-%m-%d')),('x_dtPOdone','&gt;=',(datetime.date.today()-relativedelta(day=1)).strftime('%Y-%m-%d'))]"
+							domain="[('x_dtPOdone','&lt;=',(datetime.date.today()+relativedelta(day=31)).strftime('%Y-%m-%d')),
+							('x_dtPOdone','&gt;=',(datetime.date.today()-relativedelta(day=1)).strftime('%Y-%m-%d'))]"
 							help="Pedidos realizados este mes"
 					/>
 					<filter string="este año"
@@ -109,6 +110,7 @@
 				<!-- poner  total beneficio reseller -->
 				<xpath expr="/form/sheet/notebook/page/group/field[@name='amount_untaxed']" position="before">
 					<field name="x_fRevenue" widget="monetary" nolabel="0" readonly="1" class="oe_subtotal_footer_separator o_td_label"/>
+					<field name="x_fOrderRisk" widget="monetary" nolabel="0" readonly="1"/>
 				</xpath>
 				
 				<!-- TREE: poner tarifa en cada linea ed pedido -->
