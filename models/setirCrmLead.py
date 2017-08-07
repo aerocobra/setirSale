@@ -11,6 +11,7 @@ from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_
 
 class riskProducts(models.Model):
 	_name = "risk.product"
+# eto dobavil ya
 	_rec_name = "x_strProduct"  # IMPORTANTE - por este campo se hace la selección por defecto en el formulario
 
 	x_strProduct = fields.Char ( string = "Producto")
