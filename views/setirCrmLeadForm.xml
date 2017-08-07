@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+	<data>
+		<!-- search view for the report-->
+		<record model="ir.ui.view" id="setirCrmLead_form">
+			<field name="name">setirCrmLead_form</field>
+			<field name="model">crm.lead</field>
+			<field name="inherit_id" ref="crm.crm_case_form_view_oppor"/>
+			<field name="arch" type="xml">
+				<notebook position="inside">
+					<!-- page string="Riesgo" attrs="{'invisible': [('order_ids','!=', False)]}" -->
+					<page string="Riesgo">
+                        <group>
+    						<field name="x_fLeadRisk" readonly="0"/>
+							<!-- field name="order_ids" options="{'no_create': True}" nolabel="0" readonly="1" -->
+							<field name="x_order_ids" domain="[('state','not in', 'cancel')]">
+									<tree>
+										<field name="name"/>
+										<field name="x_fOrderRisk"/>
+										<field name="state"/>
+									</tree>
+							</field>
+						</group>
+					</page>
+				</notebook>
+			</field>
+		</record>
+	</data>
+	<data>
+		<!-- parent = "base.menu_sale_config" -->
+		<!-- parent = "base.menu_sale_config" -->
+		<menuitem id="menu_setir"
+			name = "atributos setir"
+			parent = "base.menu_sale_config"
+		/>
+		<!-- fleet -->
+		<act_window id="action_product_risk_management"
+			name = "gestión riesgo"
+			res_model = "risk.product"
+			view_mode = "tree,form"
+		/>
+		<menuitem id="menu_product_risk_management"
+			name = "gestión riesgo"
+			parent = "menu_setir"
+			sequence = "20"
+			action="action_product_risk_management"
+		/>
+	</data>
+</openerp>
