@@ -53,6 +53,7 @@
 				'crm',
 				'sale',
 				'website_quote',
+                'mail',
 				],
     "data": [
 		"views/setirSaleOrderForm.xml",

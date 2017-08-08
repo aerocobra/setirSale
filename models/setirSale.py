@@ -127,10 +127,11 @@ class setirSaleOrder ( models.Model):
 			#por defecto en ODOO:
 			#id_externo: crm.stage_lead3, id:3, name:  Propuesta
 			#verificar en las etapas que hay solo una Propuesta
-			stg = self.env['crm.stage'].search([('name', '=', 'Propuesta')])
-			if stg:
-				for order in self:
-					order.opportunity_id.stage_id = stg[0].id
+			
+			for order in self:
+				if order.opportunity_id:
+					order.opportunity_id.set_stage ("Propuesta")
+			
 			#END INSERT
 			return {
 				'type': 'ir.actions.act_window',

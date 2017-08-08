@@ -12,6 +12,12 @@
 					<page string="Riesgo">
                         <group>
     						<field name="x_fLeadRisk" readonly="0"/>
+						</group>
+                        <group>
+							<button name="risk_recalc" type="object" string="recalcular"/>
+							<button name="send_risk_mail" type="object" string="Enviar solicitud riesgo" class="oe_highlight"/>
+						</group>
+                        <group>
 							<!-- field name="order_ids" options="{'no_create': True}" nolabel="0" readonly="1" -->
 							<field name="x_order_ids" domain="[('state','not in', 'cancel')]">
 									<tree>
@@ -45,5 +51,50 @@
 			sequence = "20"
 			action="action_product_risk_management"
 		/>
+	</data>
+	<data noupdate="0">
+		<record id="mail_template_data_notification_email_default" model="mail.template">
+			<field name="auto_delete" eval="False"/>
+			<field name="user_signature">FIRMA</field>
+	    </record>
+	</data>
+	<data noupdate="0">
+		<record id="risk_email_template" model="mail.template">
+			<field name="name">solicitud riesgo</field>
+			<field name="email_from">${object.user_id.email|safe}</field>
+			<field name="subject">SCR: cliente: ${object.partner_id.name} oportunidad: ${object.name}</field>
+			<field name="email_to">${object.user_id.email|safe}</field>
+			<field name="lang">${object.lang}</field>
+			<field name="model_id" ref="crm.model_crm_lead"/>
+			<field name="auto_delete" eval="False"/>
+			<field name="body_html">
+					<![CDATA[
+						<p>Hola,</p>
+						<p>según el procedimiento establecido para la fase <b><i>Venta</i></b> se solicita la cubertura de riesgo para las ofertas aceptadas por el cliente.</p>
+						<p><b><u>DATOS DE LA OPERACIÓN</u></b></p>
+						<p>Cliente: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;<b>${object.partner_id.name}</b></p>
+						<p>NIF: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <b>${object.partner_id.vat}</b></p>
+						<p>Oportunidad: &nbsp; &nbsp;<b style="font-weight: bold">${object.name}</b></p>
+						<p>Importe a solicitar: &nbsp; &nbsp;<b style="font-weight: bold">${object.x_fLeadRisk}</b></p>
+						</p><p>
+						<p>El resultado de la solicitud enviar a&nbsp;<i style="color: initial; font-variant-ligatures: initial; font-variant-caps: initial;"><b>${object.user_id.email}</b>.</i></p>
+						</p><p>
+						</p><p>
+						</p><p>
+						<p><i><b>${object.user_id.name}</b></i></p>
+						<p><u>Dpto. ${object.user_id.employee_ids.department_id.name}</u></p>
+						<p><a href="http://www.setir.es" style="text-decoration-style:solid;text-decoration-color:-moz-use-text-color;"><b>${object.company_id.name}</b></a><br></p>
+						<h6><font style="font-size: 10px;">mail: &nbsp; &nbsp; &nbsp; &nbsp;${object.user_id.email}</font></h6>
+						<h6><font style="font-size: 10px;">phone: &nbsp; &nbsp; &nbsp;${object.company_id.phone}</font></h6>
+						<h6><font style="font-size: 10px;">web: &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;</font>
+						<a href="http://www.setir.es" style="text-decoration-style:solid;text-decoration-color:-moz-use-text-color;">${object.company_id.website}</a>
+						</h6>
+						<p></p><p></p>
+						<h6 style="margin-left: 4.5em;">${object.company_id.street}</h6>
+						<h6 style="margin-left: 4.5em;">${object.company_id.zip}&nbsp;${object.company_id.city}</h6>
+						<h6 style="margin-left: 4.5em;">${object.company_id.state_id.name} ${object.company_id.country_id.name}</h6>
+					]]>
+			</field>
+	    </record>
 	</data>
 </openerp>
