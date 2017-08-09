@@ -52,13 +52,8 @@
 			action="action_product_risk_management"
 		/>
 	</data>
-	<data noupdate="0">
-		<record id="mail_template_data_notification_email_default" model="mail.template">
-			<field name="auto_delete" eval="False"/>
-			<field name="user_signature">FIRMA</field>
-	    </record>
-	</data>
-	<data noupdate="0">
+	<!-- data noupdate="0" -->
+	<data>
 		<record id="risk_email_template" model="mail.template">
 			<field name="name">solicitud riesgo</field>
 			<field name="email_from">${object.user_id.email|safe}</field>
@@ -69,30 +64,121 @@
 			<field name="auto_delete" eval="False"/>
 			<field name="body_html">
 					<![CDATA[
-						<p>Hola,</p>
-						<p>según el procedimiento establecido para la fase <b><i>Venta</i></b> se solicita la cubertura de riesgo para las ofertas aceptadas por el cliente.</p>
-						<p><b><u>DATOS DE LA OPERACIÓN</u></b></p>
-						<p>Cliente: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;<b>${object.partner_id.name}</b></p>
-						<p>NIF: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <b>${object.partner_id.vat}</b></p>
-						<p>Oportunidad: &nbsp; &nbsp;<b style="font-weight: bold">${object.name}</b></p>
-						<p>Importe a solicitar: &nbsp; &nbsp;<b style="font-weight: bold">${object.x_fLeadRisk}</b></p>
-						</p><p>
-						<p>El resultado de la solicitud enviar a&nbsp;<i style="color: initial; font-variant-ligatures: initial; font-variant-caps: initial;"><b>${object.user_id.email}</b>.</i></p>
-						</p><p>
-						</p><p>
-						</p><p>
-						<p><i><b>${object.user_id.name}</b></i></p>
-						<p><u>Dpto. ${object.user_id.employee_ids.department_id.name}</u></p>
-						<p><a href="http://www.setir.es" style="text-decoration-style:solid;text-decoration-color:-moz-use-text-color;"><b>${object.company_id.name}</b></a><br></p>
-						<h6><font style="font-size: 10px;">mail: &nbsp; &nbsp; &nbsp; &nbsp;${object.user_id.email}</font></h6>
-						<h6><font style="font-size: 10px;">phone: &nbsp; &nbsp; &nbsp;${object.company_id.phone}</font></h6>
-						<h6><font style="font-size: 10px;">web: &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;</font>
-						<a href="http://www.setir.es" style="text-decoration-style:solid;text-decoration-color:-moz-use-text-color;">${object.company_id.website}</a>
-						</h6>
-						<p></p><p></p>
-						<h6 style="margin-left: 4.5em;">${object.company_id.street}</h6>
-						<h6 style="margin-left: 4.5em;">${object.company_id.zip}&nbsp;${object.company_id.city}</h6>
-						<h6 style="margin-left: 4.5em;">${object.company_id.state_id.name} ${object.company_id.country_id.name}</h6>
+					<P STYLE="margin-top: 0.1cm; margin-bottom: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Hola,</FONT></FONT></FONT></P>
+					<P STYLE="margin-top: 0.1cm; margin-bottom: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<BR>
+					</P>
+					<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>seg&uacute;n
+					el procedimiento establecido para la fase <B>Venta</B><I><B> </B></I>se
+					solicita la cubertura de riesgo para las ofertas aceptadas por el
+					cliente.</FONT></FONT></FONT></P>
+					<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<BR><BR>
+					</P>
+					<P STYLE="margin-bottom: 0.1cm; font-style: normal; widows: 2; orphans: 2">
+					<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>DATOS
+					DE LA OPERACI&Oacute;N</B></U></FONT></FONT></FONT></P>
+					<TABLE WIDTH=627 BORDER=0 CELLPADDING=5 CELLSPACING=0>
+						<COL WIDTH=142>
+						<COL WIDTH=465>
+						<TR VALIGN=TOP>
+							<TD WIDTH=142>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cliente:</FONT></FONT></FONT></P>
+							</TD>
+							<TD WIDTH=465>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.partner_id.name}</B></FONT></FONT></FONT></P>
+							</TD>
+						</TR>
+						<TR VALIGN=TOP>
+							<TD WIDTH=142>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>NIF:</FONT></FONT></FONT></P>
+							</TD>
+							<TD WIDTH=465>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.partner_id.vat}</B></FONT></FONT></FONT></P>
+							</TD>
+						</TR>
+						<TR VALIGN=TOP>
+							<TD WIDTH=142>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Oportunidad:</FONT></FONT></FONT></P>
+							</TD>
+							<TD WIDTH=465>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.name}</B></FONT></FONT></FONT></P>
+							</TD>
+						</TR>
+						<TR VALIGN=TOP>
+							<TD WIDTH=142>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Importe
+								a solicitar:</FONT></FONT></FONT></P>
+							</TD>
+							<TD WIDTH=465>
+								<P STYLE="font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRisk}</B></FONT></FONT></FONT></P>
+							</TD>
+						</TR>
+					</TABLE>
+					<P STYLE="margin-top: 0.2cm; margin-bottom: 0.1cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>El
+					resultado de la solicitud enviar a <I><B>${object.user_id.email}</B></I><I>.</I></FONT></FONT></FONT></P>
+					<P STYLE="margin-top: 0.1cm; margin-bottom: 0cm; widows: 2; orphans: 2">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=2 STYLE="font-size: 9pt"><I><B><FONT COLOR="#000000">${object.user_id.name}</FONT></B></I></FONT></FONT></P>
+					<P STYLE="margin-top: 0.1cm; margin-bottom: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt"><U>Dpto.
+					${object.user_id.employee_ids.department_id.name}</U></FONT></FONT></FONT></P>
+					<P STYLE="margin-top: 0.1cm; margin-bottom: 0.1cm; widows: 2; orphans: 2">
+					<A HREF="http://www.setir.es/"><FONT COLOR="#337ab7"><FONT FACE="Arial, sans-serif"><FONT SIZE=2 STYLE="font-size: 9pt"><SPAN STYLE="font-style: normal"><B><SPAN STYLE="background: transparent">${object.company_id.name}</SPAN></B></SPAN></FONT></FONT></FONT></A></P>
+					<TABLE WIDTH=331 BORDER=0 CELLPADDING=5 CELLSPACING=0>
+						<COL WIDTH=48>
+						<COL WIDTH=263>
+						<TR VALIGN=TOP>
+							<TD WIDTH=48>
+								<H6 CLASS="western" STYLE="margin-top: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">mail:</FONT></FONT></H6>
+							</TD>
+							<TD WIDTH=263>
+								<H6 CLASS="western" STYLE="margin-top: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">${object.user_id.email}</FONT></FONT></H6>
+							</TD>
+						</TR>
+						<TR VALIGN=TOP>
+							<TD WIDTH=48>
+								<H6 CLASS="western" STYLE="margin-top: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">phone:</FONT></FONT></H6>
+							</TD>
+							<TD WIDTH=263>
+								<H6 CLASS="western" STYLE="margin-top: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+								<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">${object.company_id.phone}</FONT></FONT></H6>
+							</TD>
+						</TR>
+						<TR VALIGN=TOP>
+							<TD WIDTH=48>
+								<H6 CLASS="western" STYLE="margin-top: 0cm; widows: 2; orphans: 2">
+								<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt"><SPAN STYLE="font-style: normal"><SPAN STYLE="font-weight: normal">web:</SPAN></SPAN></FONT></FONT></H6>
+							</TD>
+							<TD WIDTH=263>
+								<H6 CLASS="western" STYLE="margin-top: 0cm; widows: 2; orphans: 2">
+								<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt"><A HREF="http://www.setir.es/"><FONT COLOR="#337ab7"><SPAN STYLE="font-style: normal"><SPAN STYLE="font-weight: normal"><SPAN STYLE="background: transparent">${object.company_id.website}</SPAN></SPAN></SPAN></FONT></A></FONT></FONT></H6>
+							</TD>
+						</TR>
+					</TABLE>
+					<H6 CLASS="western" STYLE="margin-top: 0.2cm; margin-bottom: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">${object.company_id.street}</FONT></FONT></H6>
+					<H6 CLASS="western" STYLE="margin-top: 0.05cm; margin-bottom: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">${object.company_id.zip}
+					${object.company_id.city}</FONT></FONT></H6>
+					<H6 CLASS="western" STYLE="margin-top: 0.05cm; margin-bottom: 0cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+					<FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">${object.company_id.state_id.name}
+					${object.company_id.country_id.name}</FONT></FONT></H6>
+					<P STYLE="margin-bottom: 0cm; font-weight: normal"><BR>
+					</P>
 					]]>
 			</field>
 	    </record>
