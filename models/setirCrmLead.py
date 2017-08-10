@@ -59,20 +59,10 @@ class setirCrmLead ( models.Model):
 
 	@api.multi
 	def send_risk_mail (self):
-		# Find the e-mail template
-		#template = self.env.ref('mail_template_demo.example_email_template')
-		#  template = self.env.ref('setirSale.risk_email_template')
-		
-		# You can also find the e-mail template like this:
-		#template = self.env['ir.model.data'].get_object('crm.lead', 'send risk')
-
-		# Send out the e-mail template to the user
-		#  self.env['mail.template'].browse(template.id).send_mail(self.id)
-
 		self.ensure_one()
 		ir_model_data = self.env['ir.model.data']
 		try:
-			template_id = ir_model_data.get_object_reference('setirSale', 'risk_email_template')[1]
+			template_id = ir_model_data.get_object_reference( "setirSale", "risk_email_template")[1]
 		except ValueError:
 			template_id = False
 		try:
@@ -86,12 +76,15 @@ class setirCrmLead ( models.Model):
 			'default_use_template': bool(template_id),
 			'default_template_id': template_id,
 			'default_composition_mode': 'comment',
+			#'default_composition_mode': 'mass_mail',
+			#'default_message_type': 'comment',
+			'default_notify': False,
+			'default_notification': False,
+			'default_subtype_id': False,
 		})
 		
 		self.set_stage ( "Riesgo")
-		
-		#self.message_post ( "RIESGO: solicitud enviada")
-		
+	
 		return {
 			'type': 'ir.actions.act_window',
 			'view_type': 'form',
@@ -102,10 +95,6 @@ class setirCrmLead ( models.Model):
 			'target': 'new',
 			'context': ctx,
 		}
-
-	#@api.one
-	#def risk_autorecalc (self):
-	#	self._compute_lead_risc()
 
 	@api.one
 	@api.depends ( 'x_order_ids')

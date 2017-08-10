@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from openerp import SUPERUSER_ID
 from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
+from openerp import exceptions
 
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
@@ -26,8 +27,8 @@ class setirSaleOrder ( models.Model):
 	x_dtPOdone			= fields.Datetime	(	string			= "F Realizado",		help	= "fecha de Pedio de Venta Realizado")
 
 	x_idOperationUser	= fields.Many2one	(	comodel_name	= "res.users",
-												string			= "Responsable operación"
-												#default			= "_get_operation_user_default"
+												string			= "Responsable operación",
+												default			= "_getOperationManager"
 											)
 
 	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
@@ -40,9 +41,6 @@ class setirSaleOrder ( models.Model):
 											)
 
 
-	#_defaults = {
-	#	'x_idOperationUser': "_get_operation_user_default"
-	#}
 
 	x_fRevenue			= fields.Float		(	string				= 'Beneficio SETIR',
 												store				= True,
@@ -53,6 +51,84 @@ class setirSaleOrder ( models.Model):
 										store				= True,
 										compute				= '_amount_all',
 										track_visibility	= 'always')
+
+
+	#se utiliza para mandar el mail utilizado la platilla ya creada
+	#1. muestra el dialogo de envio con la palntilla cargada
+	#2. usuario puede editar el correo
+	#2. usuario debe hacer clic en "enviar" para enviar el corrreo 
+	@api.multi
+	def sendMailTemplateDialog (self, strModule, strTempalteID):
+		self.ensure_one()
+		ir_model_data = self.env['ir.model.data']
+		try:
+			template_id = ir_model_data.get_object_reference( strModule, strTempalteID)[1]
+		except ValueError:
+			template_id = False
+		try:
+			compose_form_id = ir_model_data.get_object_reference('mail', 'email_compose_message_wizard_form')[1]
+		except ValueError:
+			compose_form_id = False
+		ctx = dict()
+		ctx.update({
+			'default_model': 'crm.lead',
+			'default_res_id': self.ids[0],
+			'default_use_template': bool(template_id),
+			'default_template_id': template_id,
+			'default_composition_mode': 'comment',
+		})
+		
+		return {
+			'type': 'ir.actions.act_window',
+			'view_type': 'form',
+			'view_mode': 'form',
+			'res_model': 'mail.compose.message',
+			'views': [(compose_form_id, 'form')],
+			'view_id': compose_form_id,
+			'target': 'new',
+			'context': ctx,
+		}
+
+	#envia el coprreo  automaticamente utilizando la plantilla previamente creada
+	#el correo se manda automáticamente sin mostar el dialogo de correo  
+	@api.multi
+	def sendMailTemplate ( self, strModule, strTempalteID):
+		# Find the e-mail template
+		# template = self.env.ref('mail_template_demo.example_email_template')
+		# You can also find the e-mail template like this:
+		template = self.env['ir.model.data'].get_object ( strModule, strTempalteID)
+ 
+		# Send out the e-mail template to the user
+		self.env['mail.template'].browse(template.id).send_mail(self.id)
+
+	#envia el correo automaticamente utilizando parámetros de entrada  
+	@api.multi
+	def sendMailNote ( self, email_to, email_cc, email_from, subject, msg):
+		mail_pool = self.env['mail.mail']
+
+		values={}
+		values.update({'email_to':		email_to})
+		values.update({'email_cc':		email_cc})
+		values.update({'email_from':	email_from})
+		values.update({'subject':		subject})
+		#values.update({'body':			msg})
+		values.update({'body_html':		msg})
+		#[optional] 'obj.id' here is the record id, where you want to post that email after sending
+		#values.update({'res_id':		self.id})
+		#[optional] here is the object(like 'project.project')  to whose record id you want to post that email after sending
+		#values.update({'model':		'sale.order'})
+		
+		msg_id = mail_pool.create(values)
+		# And then call send function of the mail.mail,
+		if msg_id:
+			mail_pool.send([msg_id])
+
+	#devueleve el nombre de usuario logeado
+	def getUserName (self, uid):
+		#user_obj = self.env['res.users'].search ( [('id','=', uid)])[0]
+		#user_value = user_obj.browse(uid)[0]
+		user_value = self.env['res.users'].search ( [('id','=', uid)])[0]
+		return user_value.name or False
 
 	@api.multi
 	def print_sale_report_one(self):
@@ -96,62 +172,13 @@ class setirSaleOrder ( models.Model):
 						}, context=context)
 		return True
 
-	#se sobreescribe para poner la oportubidad correspondiente al estado "Propuesta"
-	# se reproduce todo_ el codigo inicial con incersión de
-	@api.multi
-	def action_quotation_send(self):
-			'''
-			This function opens a window to compose an email, with the edi sale template message loaded by default
-			'''
-
-			self.ensure_one()
-			ir_model_data = self.env['ir.model.data']
-			try:
-				template_id = ir_model_data.get_object_reference('sale', 'email_template_edi_sale')[1]
-			except ValueError:
-				template_id = False
-			try:
-				compose_form_id = ir_model_data.get_object_reference('mail', 'email_compose_message_wizard_form')[1]
-			except ValueError:
-				compose_form_id = False
-			ctx = dict()
-			ctx.update({
-				'default_model': 'sale.order',
-				'default_res_id': self.ids[0],
-				'default_use_template': bool(template_id),
-				'default_template_id': template_id,
-				'default_composition_mode': 'comment',
-				'mark_so_as_sent': True
-			})
-			#BEGIN INSERT
-			#por defecto en ODOO:
-			#id_externo: crm.stage_lead3, id:3, name:  Propuesta
-			#verificar en las etapas que hay solo una Propuesta
-			
-			for order in self:
-				if order.opportunity_id:
-					order.opportunity_id.set_stage ("Propuesta")
-			
-			#END INSERT
-			return {
-				'type': 'ir.actions.act_window',
-				'view_type': 'form',
-				'view_mode': 'form',
-				'res_model': 'mail.compose.message',
-				'views': [(compose_form_id, 'form')],
-				'view_id': compose_form_id,
-				'target': 'new',
-				'context': ctx,
-			}
-
-	#se sibreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
+	#se sobreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
 	@api.onchange('x_eProvider')
 	def on_provider_change ( self):
 		for line in self.order_line:
 			line.x_eProvider = self.x_eProvider
 			line.product_uom_change()
-
 
 	def get_providers (self):
 		providers = []
@@ -161,77 +188,28 @@ class setirSaleOrder ( models.Model):
 		return providers
 
 	@api.model
-	def _get_operation_user_default ( self):
+	def _getOperationManager ( self):
 		idOperationsManager	= self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.user_id.id
-		return self.env['res.users'].search([('id', '=', idOperationsManager)])[0].id
+		return self.env['res.users'].search([('id', '=', idOperationsManager)])[0]
 
-	@api.one
-	def formalize ( self):
-		if self.x_dtPOformalize != False or self.x_idOperationUser == False:
-			return
-		self.x_dtPOformalize	= fields.Datetime.now()
-
-		#al responsable operaciones asignado
-		strMailTo = self.x_idOperationUser.email
-		#al comercial responsable
-		strMailCc = self.user_id.email + ", " + self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.work_email
-		
-		strName		= self.name
-
-		#strState	= str ( dict(self.fields_get(allfields=['state'])['state']['selection'])[order.state])
-		strUser		= self.x_idOperationUser.name
-
-		strNotification = "FT: [" + strName + u"]: asignado para su formalización a [" + str ( strUser) + "]"
-
-		self.send_mail_note (
-								strMailTo,
-								strMailCc,
-								"sistemas@setir.es",
-								strNotification,
-								strNotification
-							)
-
-		self.message_post ( strNotification)
-
-	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
 	@api.model
 	def create(self, vals):
 		result = super (setirSaleOrder, self).create (vals)
-		#self.notify_work_flow ( "Presupuesto (oferta) CREADO")
+		#self.notifyWorkFlow ( "Presupuesto (oferta) CREADO", False)
 		return result
 
-	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
+	#se sobreescribe para poner la oportubidad correspondiente al estado "Propuesta"
 	@api.multi
-	def action_confirm(self):
+	def action_quotation_send(self):
+		result = super (setirSaleOrder, self).action_quotation_send()
+		#por defecto en ODOO:
+		#id_externo: crm.stage_lead3, id:3, name:  Propuesta
+		#verificar en las etapas que hay solo una Propuesta
 		for order in self:
-			#codigo estandar
-			order.state = 'sale'
-			if self.env.context.get('send_email'):
-				self.force_quotation_send()
-			order.order_line._action_procurement_create()
-			if not order.project_id:
-				for line in order.order_line:
-					if line.product_id.invoice_policy == 'cost':
-						order._create_analytic_account()
-						break
-			#codigo setir *****************************************************
-			#order.x_dtPOconfirmed	= fields.Datetime.now()
-			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
-			order.notify_work_flow( "PEDIDO DE VENTA")
-			#fin codigo setir *************************************************
+			if order.opportunity_id:
+				order.opportunity_id.set_stage ("Propuesta")
 
-		if self.env['ir.values'].get_default('sale.config.settings', 'auto_done_setting'):
-			self.action_done()
-		return True
-
-	@api.multi
-	def action_done(self):
-		#self.write({'state': 'done'})
-		super ( setirSaleOrder, self).action_done()
-
-		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
-
-		self.notify_work_flow( "PEDIDO DE VENTA - REALIZADO")
+		return result
 
 	@api.multi
 	def action_cancel(self):
@@ -242,7 +220,7 @@ class setirSaleOrder ( models.Model):
 		self.write ( {'x_dtPOformalize' : 0})
 		self.write ( {'x_dtPOdone' : 0})
 
-		self.notify_work_flow( "CANCELADO")
+		self.notifyWorkFlow( "CANCELADO", False)
 
 	@api.multi
 	def action_draft(self):
@@ -251,58 +229,113 @@ class setirSaleOrder ( models.Model):
 		self.write ( {'x_dtPOformalize' : 0})
 		self.write ( {'x_dtPOdone' : 0})
 
-		self.notify_work_flow( "BORRADOR")
+		self.notifyWorkFlow( "OFERTA", False)
+
+	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
+	@api.multi
+	def action_confirm(self):
+		for order in self:
+			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
+			order.notifyWorkFlow( "PEDIDO DE VENTA - CREADO de Ofera", True)
+
+		return super ( setirSaleOrder, self).action_confirm()
+
+	@api.one
+	def formalize ( self):
+		#return self.env['warning.dialog'].info(title='Export imformation', message="MESSAGE")
+		if not self.x_idOperationUser:
+			raise exceptions.ValidationError ( 'Es necesario indicar al responsable operaciones')
+		
+		self.x_dtPOformalize	= fields.Datetime.now()
+		self.notifyWorkFlow( "PEDIDO DE VENTA, FORMALIZACIÓN", True)
+		self.message_post ( "PEDIDO DE VENTA - FORMALIZACIÓN")
+
+	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
+
+	@api.multi
+	def action_done(self):
+		#self.write({'state': 'done'})
+		super ( setirSaleOrder, self).action_done()
+		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
+		self.notifyWorkFlow( "PEDIDO DE VENTA - REALIZADO", True)
 
 	#manada correo al comercial y al resposable del departameinto de "operaciones"
 	#por lo que es necesario crear el departamiento "operaciones" y su responsabñle con el correo establecido
-	def notify_work_flow ( self, strMsg):
+	def notifyWorkFlow ( self, strState, bNotifyOperations = True):
 		order = self
 		#al comercial responsable
 		strMailTo = order.user_id.email
 		#al responsable del departamento operaciones
-		strMailCc = self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.work_email
+		if bNotifyOperations:
+			strMailCc = self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.work_email
+		else:
+			strMailCc = ""
 		
-		strName		= order.name
+		strOrder	= order.name
 		if order.name == False:
-			strName = "NUEVO"
+			strOrder = "oferta indefinida"
 
 		#strState	= str ( dict(self.fields_get(allfields=['state'])['state']['selection'])[order.state])
-		strUser		= order.user_id.name
+		strSalesman		= order.user_id.name
 		if order.user_id.name == False:
-			strUser = "consultar"
+			strSalesman = "comercial indefinido"
 
-		strNotification = "FT: [" + strName + "]: estado [" + strMsg + "] establecido por [" + strUser + "]"
+		strUser = self.getUserName ( self.env.user.id)
+		
+		strNotification = '''
+								<P STYLE="margin-bottom: 0.2cm; font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>DETALLE
+								DE LA ACCI&Oacute;N</B></FONT></FONT></FONT></P>
+								<TABLE WIDTH=470 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=5 CELLSPACING=0>
+									<COL WIDTH=188>
+									<COL WIDTH=260>
+									<TR VALIGN=TOP>
+										<TD WIDTH=188>
+											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Oferta/Pedido
+											de Venta:</FONT></FONT></FONT></P>
+										</TD>
+										<TD WIDTH=260>
+											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
+										</TD>
+									</TR>
+									<TR VALIGN=TOP>
+										<TD WIDTH=188>
+											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="text-decoration: none">Nuevo
+											estado</SPAN></FONT></FONT></FONT></P>
+										</TD>
+										<TD WIDTH=260>
+											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
+										</TD>
+									</TR>
+									<TR VALIGN=TOP>
+										<TD WIDTH=188>
+											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="text-decoration: none">Comercial
+											Asignado</SPAN></FONT></FONT></FONT></P>
+										</TD>
+										<TD WIDTH=260>
+											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
+										</TD>
+									</TR>
+									<TR VALIGN=TOP>
+										<TD WIDTH=188>
+											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cambio
+											realizado por</FONT></FONT></FONT></P>
+										</TD>
+										<TD WIDTH=260>
+											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
+										</TD>
+									</TR>
+								</TABLE>
+								<P STYLE="margin-bottom: 0cm; font-style: normal"><BR>
+								</P>
+							 ''' % (strOrder, strState, strSalesman, strUser)
 
-		order.send_mail_note (
+		self.sendMailNote (
 								strMailTo,
 								strMailCc,
 								"sistemas@setir.es",
-								strNotification,
+								"cambio estado oferta/pedido [%s], nuevo estado [%s]" % ( strOrder, strState),
 								strNotification
 							)
-
-		self.message_post ( strNotification)
-
-	#self.send_mail_note( 'igor.kartashov@setir.es, astic@astic.net', data.get('company_name'), data.get('name'))
-	def send_mail_note ( self, email_to, email_cc, email_from, subject, msg):
-		mail_pool = self.env['mail.mail']
-
-		values={}
-		values.update({'email_to':		email_to})
-		values.update({'email_cc':		email_cc})
-		values.update({'email_from':	email_from})
-		values.update({'subject':		subject})
-		#values.update({'body':			'contenidos en html' })
-		values.update({'body_html':		msg})
-		#[optional] 'obj.id' here is the record id, where you want to post that email after sending
-		#values.update({'res_id':		self.id})
-		#[optional] here is the object(like 'project.project')  to whose record id you want to post that email after sending
-		#values.update({'model':		'sale.order'})
-		
-		msg_id = mail_pool.create(values)
-		# And then call send function of the mail.mail,
-		if msg_id:
-			mail_pool.send([msg_id])
 
 	#sobreescrito para rRevenue
 	#@api.one

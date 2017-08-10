@@ -9,47 +9,39 @@ from openerp import SUPERUSER_ID
 from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 
-class setirTools ( models.Model):
-    _name = "setir.tools"
+class localMailMail(models.Model):
 
-    @api.one
-    def sendMailTemplate (self, strModule, strTempalteID):
-        # Find the e-mail template
-        #template = self.env.ref('mail_template_demo.example_email_template')
-        #  template = self.env.ref('setirSale.risk_email_template')
-        
-        # You can also find the e-mail template like this:
-        #template = self.env['ir.model.data'].get_object('crm.lead', 'send risk')
+	_inherit = 'mail.mail'
+	
+	def _get_partner_access_link(self, cr, uid, mail, partner=None, context=None):
+		# Do not append access link
+		return None
 
-        # Send out the e-mail template to the user
-        #  self.env['mail.template'].browse(template.id).send_mail(self.id)
+class MailNotification(models.Model):
+	_inherit = 'mail.notification'
 
-        #self.ensure_one()
-        ir_model_data = self.env['ir.model.data']
-        try:
-            template_id = ir_model_data.get_object_reference( strModule, strTempalteID)[1]
-        except ValueError:
-            template_id = False
-        try:
-            compose_form_id = ir_model_data.get_object_reference('mail', 'email_compose_message_wizard_form')[1]
-        except ValueError:
-            compose_form_id = False
-        ctx = dict()
-        ctx.update({
-            'default_model': 'crm.lead',
-            'default_res_id': self.ids[0],
-            'default_use_template': bool(template_id),
-            'default_template_id': template_id,
-            'default_composition_mode': 'comment',
-        })
-        
-        return {
-            'type': 'ir.actions.act_window',
-            'view_type': 'form',
-            'view_mode': 'form',
-            'res_model': 'mail.compose.message',
-            'views': [(compose_form_id, 'form')],
-            'view_id': compose_form_id,
-            'target': 'new',
-            'context': ctx,
-        }
+	def get_signature_footer(self, cr, uid, user_id, res_model=None, res_id=None, context=None, user_signature=True):
+		""" Format a standard footer for notification emails (such as pushed messages notification or invite emails).
+			Format:
+				<p>--<br />
+					Administrator
+				</p>
+				<div>
+					<small>Sent from <a ...>Your Company</a>
+						   using <a ...>OpenERP</a>.</small>
+				</div>
+		"""
+		footer = ""
+		if not user_id:
+			return footer
+
+		# Only add user signature
+		user = self.pool.get("res.users").browse(cr, SUPERUSER_ID, [user_id],context=context)[0]
+		if user_signature:
+			if user.signature:
+				signature = user.signature
+			else:
+				signature = "--<br />%s" % user.name
+			footer = tools.append_content_to_html(footer, signature, plaintext=False)
+
+		return footer
