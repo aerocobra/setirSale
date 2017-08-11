@@ -247,8 +247,8 @@ class setirSaleOrder ( models.Model):
 			raise exceptions.ValidationError ( 'Es necesario indicar al responsable operaciones')
 		
 		self.x_dtPOformalize	= fields.Datetime.now()
-		self.notifyWorkFlow( "PEDIDO DE VENTA, FORMALIZACIÓN", True)
-		self.message_post ( "PEDIDO DE VENTA - FORMALIZACIÓN")
+		self.notifyWorkFlow( u"PEDIDO DE VENTA, FORMALIZACIÓN", True)
+		self.message_post ( u"PEDIDO DE VENTA - FORMALIZACIÓN")
 
 	#sobreesctito para "sale.order.setir", NOTA: workflow no esta programado
 
