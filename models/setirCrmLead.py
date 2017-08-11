@@ -10,6 +10,8 @@ from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 
 class riskProducts(models.Model):
+	
+	#NUEVO COMMENTARIOOOO con Sr Guillermo 
 	_name = "risk.product"
 
 	_rec_name = "x_strProduct"  # IMPORTANTE - por este campo se hace la selección por defecto en el formulario
@@ -40,6 +42,7 @@ class riskProducts(models.Model):
 									help	= "Factor de correción: 1,2 corresponde a subida de 20%")
 
 
+
 	@api.onchange ('x_idProduct')
 	def on_product_change (self):
 		self.x_strProduct = self.x_idProduct.name
@@ -57,6 +60,8 @@ class setirCrmLead ( models.Model):
 	# se añade uno igual paar no tener problemas en la vista
 	x_order_ids = fields.One2many('sale.order', 'opportunity_id', string='Ofertas')
 
+	x_strCurrentStage	= fields.Char ( compute = "getCurrentStage")
+	
 	@api.multi
 	def send_risk_mail (self):
 		self.ensure_one()
@@ -113,3 +118,10 @@ class setirCrmLead ( models.Model):
 		stg = self.env['crm.stage'].search([('name', '=', strStage)])
 		if stg:
 			self.stage_id = stg[0].id
+
+	@api.one
+	def getCurrentStage (self):
+		stg = self.env['crm.stage'].search([('stage_id', '=', self.stage_id)])
+		self.x_strCurrentStage	= "no defenido"
+		if stg:
+			self.x_strCurrentStage = stg[0].name
