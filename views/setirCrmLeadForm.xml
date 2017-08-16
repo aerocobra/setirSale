@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
 	<data>
-		<!-- search view for the report-->
 		<record model="ir.ui.view" id="setirCrmLead_form">
 			<field name="name">setirCrmLead_form</field>
 			<field name="model">crm.lead</field>
@@ -10,12 +9,18 @@
 				<notebook position="inside">
 					<!-- page string="Riesgo" attrs="{'invisible': [('order_ids','!=', False)]}" -->
 					<page string="Riesgo">
-                        <group>
-    						<field name="x_fLeadRisk" readonly="0"/>
-						</group>
-                        <group>
-							<button name="risk_recalc" type="object" string="recalcular"/>
-							<button name="send_risk_mail" type="object" string="Enviar solicitud riesgo" class="oe_highlight"/>
+                        <group col="6" colspan="2">
+							<field name="x_strCurrentStage" invisible="1"/>
+							<field name="x_bOperationsDirector" invisible="1"/>
+                        	<group string="Solicitud">
+	    						<field name="x_fLeadRiskRequest" readonly="0"/>
+								<button name="risk_recalc" type="object" string="recalcular"/>
+								<button name="send_risk_mail" type="object" string="Enviar solicitud riesgo" class="oe_highlight"/>
+                        	</group>
+	                        <group string="Aprobación">
+	    						<field name="x_eLeadRiskResult"  attrs="{'readonly': [('x_bOperationsDirector','=', False)]}"/>
+	    						<field name="x_fLeadRiskApproved" attrs="{'readonly': [('x_bOperationsDirector','=', '0')]}"/>
+							</group>
 						</group>
                         <group>
 							<!-- field name="order_ids" options="{'no_create': True}" nolabel="0" readonly="1" -->
@@ -121,7 +126,7 @@
 								</TD>
 								<TD WIDTH=465>
 									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
-									<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRisk}</B></FONT></FONT></FONT></P>
+									<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRiskRequest}</B></FONT></FONT></FONT></P>
 								</TD>
 							</TR>
 						</TABLE>

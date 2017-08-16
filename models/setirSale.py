@@ -413,7 +413,8 @@ class setirSaleOrderLine ( models.Model):
 
 			risk_amount	= risk_amount / risk_products[0].x_nPeriod
 			risk_amount = risk_amount * risk_products[0].x_fFactor
-
+			risk_amount = risk_amount * risk_products[0].x_nMonth
+			
 		return risk_amount
 
 	#los campos compute por defecto se calculan al mostrar la vista y al salvar los cambios
