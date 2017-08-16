@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from openerp import SUPERUSER_ID
 from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
+from openerp import exceptions
+
+
 
 class riskProducts(models.Model):
 	
@@ -37,6 +40,9 @@ class riskProducts(models.Model):
 	x_nPeriod	= fields.Integer (  string	= "Periodo consumo",
 									default = 12,
 									help	= "Se pone en meses: 12 - 1 año, 1 - 1 mes")
+	x_nMonth	= fields.Integer (  string	= "Meses de cobertura",
+									default = 2,
+									help	= "Cantidad de meses a cubrir")
 	x_fFactor	= fields.Float	(	string	= "Factor de correción",
 									default = 1.2,
 									help	= "Factor de correción: 1,2 corresponde a subida de 20%")
@@ -48,19 +54,61 @@ class riskProducts(models.Model):
 		self.x_strProduct = self.x_idProduct.name
 
 class setirCrmLead ( models.Model):
-	_inherit = ['crm.lead']
+	_inherit = "crm.lead"
 
-	x_fLeadRisk	= fields.Float	(
-		#store	= True,
-		#compute	= '_compute_lead_risc',
-		string	= 'Riesgo',
-		help ="Para calcular basandose en los datos de las ofertas utilizar el botón [recalcular]"
-	)
+	x_fLeadRiskRequest	= fields.Float	(
+											string	= 'Solicitado',
+											help	="Para calcular basandose en los datos de las ofertas utilizar el botón [recalcular]"
+										)
+
+	x_fLeadRiskApproved	= fields.Float	(
+											string	= 'Aprobado',
+											help	= "Responsable popne aquí el impoirte de la cobertura aprobada"
+										)
+	x_eLeadRiskResult		= fields.Selection (
+											string		= "Resultado aprobación",
+											selection 	= [('rechazado', 'Rechazado'),
+															('total', 'Aprobado total'),
+															('parcial', 'Aprobado parcial')],
+											inverse		= "onSetRiskResult"
+											)
+
 	
-	# se añade uno igual paar no tener problemas en la vista
-	x_order_ids = fields.One2many('sale.order', 'opportunity_id', string='Ofertas')
+	# se añade uno igual para no tener problemas en la vista
+	x_order_ids				= fields.One2many	( comodel_name = 'sale.order', inverse_name = 'opportunity_id', string='Ofertas')
 
-	x_strCurrentStage	= fields.Char ( compute = "getCurrentStage")
+	x_strCurrentStage		= fields.Char		( compute	= "getCurrentStage")
+	x_bOperationsDirector	= fields.Boolean	( compute	= "isOperationsDirector")
+
+
+	@api.one
+	def isOperationsDirector (self):
+		idOperationsManager	= self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.user_id.id
+		strSS = "[" + str (idOperationsManager) + "][" + str (self.env.user) + "][" + str (self.env.user.id) + "]"
+
+		raise exceptions.ValidationError ( strSS)
+	
+		if idOperationsManager == self.env.user:
+			raise exceptions.ValidationError ( 'OM')
+			return True
+		else:
+			return False 
+
+	@api.one
+	def getCurrentStage (self):
+		stg = self.env['crm.stage'].search([('id', '=', self.stage_id.id)])
+		self.x_strCurrentStage	= "no defenido"
+		if stg:
+			self.x_strCurrentStage = stg[0].name
+
+	@api.one
+	@api.onchange ('x_eLeadRiskResult')
+	def onSetRiskResult (self):
+		if self.x_eLeadRiskResult == 'total':
+			self.x_fLeadRiskApproved = self.x_fLeadRiskRequest
+			return
+
+		self.x_fLeadRiskApproved = 0.0
 	
 	@api.multi
 	def send_risk_mail (self):
@@ -105,13 +153,13 @@ class setirCrmLead ( models.Model):
 	@api.depends ( 'x_order_ids')
 	def risk_recalc (self):
 		for record in self:
-			record.x_fLeadRisk = fLeadRisk = 0.0
+			record.x_fLeadRiskRequest = fLeadRiskRequest = 0.0
 			if record.x_order_ids == False:
 				return
 			for order in record.x_order_ids:
-				fLeadRisk += order.x_fOrderRisk
+				fLeadRiskRequest += order.x_fOrderRisk
 	
-			record.x_fLeadRisk = fLeadRisk
+			record.x_fLeadRiskRequest = fLeadRiskRequest
 
 	@api.one
 	def set_stage (self, strStage):
@@ -119,9 +167,3 @@ class setirCrmLead ( models.Model):
 		if stg:
 			self.stage_id = stg[0].id
 
-	@api.one
-	def getCurrentStage (self):
-		stg = self.env['crm.stage'].search([('stage_id', '=', self.stage_id)])
-		self.x_strCurrentStage	= "no defenido"
-		if stg:
-			self.x_strCurrentStage = stg[0].name
