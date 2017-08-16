@@ -88,6 +88,7 @@ class setirCrmLead ( models.Model):
 
 		raise exceptions.ValidationError ( strSS)
 	
+	
 		if idOperationsManager == self.env.user:
 			raise exceptions.ValidationError ( 'OM')
 			return True
