@@ -84,6 +84,7 @@ class setirCrmLead ( models.Model):
 	@api.one
 	def isOperationsDirector (self):
 		idOperationsManager	= self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.user_id.id
+
 	
 		if idOperationsManager == self.env.user.id:
 			return True
