@@ -58,13 +58,9 @@
 			action="action_product_risk_management"
 		/>
 	</data>
-<<<<<<< HEAD
-	<data>
-=======
 	<!-- data noupdate="0" -->
 	<data>
 		<!-- plantilla correo riesgo -->
->>>>>>> refs/remotes/eclipse_auto/master
 		<record id="risk_email_template" model="mail.template">
 			<field name="name">solicitud riesgo</field>
 			<field name="email_from">${object.user_id.email}</field>
