@@ -86,6 +86,7 @@ class setirCrmLead ( models.Model):
 		idOperationsManager	= self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.user_id.id
 		strSS = "[" + str (idOperationsManager) + "][" + str (self.env.user) + "][" + str (self.env.user.id) + "]"
 
+
 		raise exceptions.ValidationError ( strSS)
 	
 		if idOperationsManager == self.env.user:
