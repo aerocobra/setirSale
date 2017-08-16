@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
 	<data>
+<<<<<<< HEAD
 		<record model="ir.ui.view" id="setirCrmLead_form">
 			<field name="name">setirCrmLead_form</field>
 			<field name="model">crm.lead</field>
@@ -127,6 +128,129 @@
 								<TD WIDTH=465>
 									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
 									<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRiskRequest}</B></FONT></FONT></FONT></P>
+=======
+		<!-- search view for the report-->
+		<record model="ir.ui.view" id="setirCrmLead_form">
+			<field name="name">setirCrmLead_form</field>
+			<field name="model">crm.lead</field>
+			<field name="inherit_id" ref="crm.crm_case_form_view_oppor"/>
+			<field name="arch" type="xml">
+				<notebook position="inside">
+					<!-- page string="Riesgo" attrs="{'invisible': [('order_ids','!=', False)]}" -->
+					<page string="Riesgo">
+                        <group>
+    						<field name="x_fLeadRisk" readonly="0"/>
+						</group>
+                        <group>
+							<button name="risk_recalc" type="object" string="recalcular"/>
+							<button name="send_risk_mail" type="object" string="Enviar solicitud riesgo" class="oe_highlight"/>
+						</group>
+                        <group>
+							<!-- field name="order_ids" options="{'no_create': True}" nolabel="0" readonly="1" -->
+							<field name="x_order_ids" domain="[('state','not in', 'cancel')]">
+									<tree>
+										<field name="name"/>
+										<field name="x_fOrderRisk"/>
+										<field name="state"/>
+									</tree>
+							</field>
+						</group>
+					</page>
+				</notebook>
+			</field>
+		</record>
+	</data>
+	<data>
+		<!-- parent = "base.menu_sale_config" -->
+		<!-- parent = "base.menu_sale_config" -->
+		<menuitem id="menu_setir"
+			name = "atributos setir"
+			parent = "base.menu_sale_config"
+		/>
+		<!-- fleet -->
+		<act_window id="action_product_risk_management"
+			name = "gestión riesgo"
+			res_model = "risk.product"
+			view_mode = "tree,form"
+		/>
+		<menuitem id="menu_product_risk_management"
+			name = "gestión riesgo"
+			parent = "menu_setir"
+			sequence = "20"
+			action="action_product_risk_management"
+		/>
+	</data>
+	<!-- data noupdate="0" -->
+	<data>
+		<record id="mail_template_data_notification_email_default" model="mail.template">
+			<field name="name">DUMMY</field>
+		</record>
+	</data>
+	<data>
+		<record id="risk_email_template" model="mail.template">
+			<field name="name">solicitud riesgo</field>
+			<field name="email_from">${object.user_id.email}</field>
+			<field name="subject">SCR: cliente: ${object.partner_id.name} oportunidad: ${object.name}</field>
+			<field name="email_to">${object.user_id.email}</field>
+			<field name="reply_to">${object.user_id.email}</field>
+			<field name="lang">${object.lang}</field>
+			<field name="model_id" ref="crm.model_crm_lead"/>
+			<field name="auto_delete" eval="False"/>
+			<field name="body_html">
+					<![CDATA[
+						<P STYLE="margin-top: 0.1cm; margin-bottom: 0cm; widows: 2; orphans: 2">
+						<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="font-style: normal"><SPAN STYLE="font-weight: normal">Hola,</SPAN></SPAN></FONT></FONT></FONT></P>
+						<P STYLE="margin-top: 0.1cm; margin-bottom: 0cm; widows: 2; orphans: 2">
+						<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="font-style: normal"><SPAN STYLE="font-weight: normal">seg&uacute;n
+						el procedimiento establecido para la fase </SPAN></SPAN></FONT></FONT></FONT><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="font-style: normal"><B>Venta</B></SPAN></FONT></FONT></FONT><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="font-style: normal"><SPAN STYLE="font-weight: normal">
+						se solicita la cubertura de riesgo para las ofertas aceptadas por el
+						cliente.</SPAN></SPAN></FONT></FONT></FONT></P>
+						<P STYLE="margin-top: 0.3cm; margin-bottom: 0.1cm; widows: 2; orphans: 2">
+						<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="font-style: normal"><U><B>DATOS
+						DE LA OPERACI&Oacute;N</B></U></SPAN></FONT></FONT></FONT></P>
+						<TABLE WIDTH=627 BORDER=0 CELLPADDING=5 CELLSPACING=0>
+							<COL WIDTH=142>
+							<COL WIDTH=465>
+							<TR VALIGN=TOP>
+								<TD WIDTH=142>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cliente:</FONT></FONT></FONT></P>
+								</TD>
+								<TD WIDTH=465>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.partner_id.name}</B></FONT></FONT></FONT></P>
+								</TD>
+							</TR>
+							<TR VALIGN=TOP>
+								<TD WIDTH=142>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>NIF:</FONT></FONT></FONT></P>
+								</TD>
+								<TD WIDTH=465>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.partner_id.vat}</B></FONT></FONT></FONT></P>
+								</TD>
+							</TR>
+							<TR VALIGN=TOP>
+								<TD WIDTH=142>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Oportunidad:</FONT></FONT></FONT></P>
+								</TD>
+								<TD WIDTH=465>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.name}</B></FONT></FONT></FONT></P>
+								</TD>
+							</TR>
+							<TR VALIGN=TOP>
+								<TD WIDTH=142>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; font-weight: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Importe
+									a solicitar:</FONT></FONT></FONT></P>
+								</TD>
+								<TD WIDTH=465>
+									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
+									<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRisk}</B></FONT></FONT></FONT></P>
+>>>>>>> refs/remotes/eclipse_auto/master
 								</TD>
 							</TR>
 						</TABLE>
