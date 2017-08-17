@@ -237,6 +237,9 @@ class setirSaleOrder ( models.Model):
 		for order in self:
 			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
 			order.notifyWorkFlow( "PEDIDO DE VENTA - CREADO de Ofera", True)
+			if order.opportunity_id:
+				order.opportunity_id.set_stage (u"Aprobación")
+
 
 		return super ( setirSaleOrder, self).action_confirm()
 
@@ -413,12 +416,8 @@ class setirSaleOrderLine ( models.Model):
 
 			risk_amount	= risk_amount / risk_products[0].x_nPeriod
 			risk_amount = risk_amount * risk_products[0].x_fFactor
-<<<<<<< HEAD
 			risk_amount = risk_amount * risk_products[0].x_nMonth
-			
-=======
 
->>>>>>> refs/remotes/eclipse_auto/master
 		return risk_amount
 
 	#los campos compute por defecto se calculan al mostrar la vista y al salvar los cambios
