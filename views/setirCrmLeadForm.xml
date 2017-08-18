@@ -123,7 +123,7 @@
 								</TD>
 								<TD WIDTH=465>
 									<P STYLE="margin-top: 0.1cm; font-style: normal; widows: 2; orphans: 2">
-									<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRisk}</B></FONT></FONT></FONT></P>
+									<FONT COLOR="#ff3333"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>${object.x_fLeadRiskRequest}</B></FONT></FONT></FONT></P>
 								</TD>
 							</TR>
 						</TABLE>
