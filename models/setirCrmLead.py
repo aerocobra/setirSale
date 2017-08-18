@@ -11,7 +11,6 @@ from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_
 from openerp import exceptions
 
 
-
 class riskProducts(models.Model):
 	
 	#NUEVO COMMENTARIOOOO con Sr Guillermo 
@@ -84,11 +83,15 @@ class setirCrmLead ( models.Model):
 	@api.one
 	def isOperationsDirector (self):
 		idOperationsManager	= self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.user_id.id
-		#comm
-		if idOperationsManager == self.env.user.id:
-			return True
+		
+		strSS = "={}={}=".format(idOperationsManager, self.env.user.id)
+		#strSS = "=" + str(idOperationsManager) + "=" + str (self.env.user.id) + "="
+		#self.message_post ( strSS)
+
+		if int (idOperationsManager) == int (self.env.user.id):
+			self.x_bOperationsDirector = True
 		else:
-			return False 
+			self.x_bOperationsDirector = False 
 
 	@api.one
 	def getCurrentStage (self):

@@ -10,6 +10,50 @@
 		</record>
 	</data -->
 	<data>
+		<record model="ir.ui.view" id="setirViewQuotationTree">
+			<field name="name">setirViewQuotationTree</field>
+			<field name="model">sale.order</field>
+			<field name="inherit_id" ref="sale.view_quotation_tree"/>
+			<field name="arch" type="xml">
+				<xpath expr="/tree/field[@name='message_needaction']" position="after">
+                    <field name="template_id"/>
+				</xpath>
+				<xpath expr="/tree/field[@name='date_order']" position="attributes">
+					<attribute name="widget">date</attribute>
+				</xpath>
+				<xpath expr="/tree/field[@name='amount_total']" position="before">
+                    <field name="x_fRevenue" sum="Total SETIR" widget="monetary"/>
+                    <field name="amount_untaxed" sum="Total Untaxed" widget="monetary"/>
+				</xpath>
+			</field>
+		</record>
+	</data>
+	<data>
+		<record model="ir.ui.view" id="setirViewOrderTree">
+			<field name="name">setirViewOrderTree</field>
+			<field name="model">sale.order</field>
+			<field name="inherit_id" ref="sale.view_order_tree"/>
+			<field name="arch" type="xml">
+				<xpath expr="/tree/field[@name='message_needaction']" position="after">
+                    <field name="template_id"/>
+				</xpath>
+				<xpath expr="/tree/field[@name='date_order']" position="attributes">
+					<attribute name="widget">date</attribute>
+				</xpath>
+				<xpath expr="/tree/field[@name='amount_total']" position="before">
+                    <field name="x_fRevenue" sum="Total SETIR" widget="monetary"/>
+                    <field name="amount_untaxed" sum="Total Untaxed" widget="monetary"/>
+				</xpath>
+				<xpath expr="/tree/field[@name='invoice_status']" position="attributes">
+					<attribute name="invisible">True</attribute>
+				</xpath>
+				<xpath expr="/tree/field[@name='state']" position="attributes">
+					<attribute name="invisible">False</attribute>
+				</xpath>
+			</field>
+		</record>
+	</data>
+	<data>
 		<!-- search view for the report-->
 		<record model="ir.ui.view" id="setirSaleSearch_form">
 			<field name="name">setirSaleSearch_form</field>
@@ -67,7 +111,7 @@
 	</data>
 	<data>
 		<!-- ATENCION  -->
-		<!-- quitar opportuniti_id desde la vista heredad en el formulario, en otro caso este dato no se muestra en el mimo campo añadido aqui -->
+		<!-- quitar opportuniti_id desde la vista heredada en el formulario, en otro caso este dato no se muestra en el mimo campo añadido aqui -->
 		<!-- For the form view and id field (whatever) -->
 		<record model="ir.ui.view" id="setirSaleOrderForm">
 			<!-- Name field (whatever) -->

@@ -236,10 +236,9 @@ class setirSaleOrder ( models.Model):
 	def action_confirm(self):
 		for order in self:
 			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
-			order.notifyWorkFlow( "PEDIDO DE VENTA - CREADO de Ofera", True)
+			order.notifyWorkFlow( "PEDIDO DE VENTA - CREADO desde Ofera", True)
 			if order.opportunity_id:
 				order.opportunity_id.set_stage (u"Aprobación")
-
 
 		return super ( setirSaleOrder, self).action_confirm()
 
@@ -261,6 +260,114 @@ class setirSaleOrder ( models.Model):
 		super ( setirSaleOrder, self).action_done()
 		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
 		self.notifyWorkFlow( "PEDIDO DE VENTA - REALIZADO", True)
+		fRevenue	= 0.0
+		strOrders	= ""
+		for order in self:
+			if order.opportunity_id:
+				if order.opportunity_id.order_ids.search([('opportunity_id', '=', order.opportunity_id.id),('state', 'in',['draft', 'sent', 'sale'])]):
+					#existe por lo menos un pedido no realizado
+					self.message_post ( u"existen ofertas/pedidos no realizados, oportunidad no ganada")
+					return
+				for doneOrder in order.opportunity_id.order_ids.search([('opportunity_id', '=', order.opportunity_id.id),('state', '=','done')]):
+					fRevenue += doneOrder.x_fRevenue
+					strOrders += doneOrder.name +", "
+					
+				order.opportunity_id.set_stage (u"Aprobación")
+				
+				order.opportunity_id.planned_revenue = fRevenue
+				self.message_post ( u"todos los pedidos realizados, ingreso estimado actualizado en la oportunidad con el beneficio setir [{}]".format (fRevenue))
+				order.opportunity_id.action_set_won()
+
+				strMailTo = order.user_id.email
+				strMailCc = self.env['hr.department'].search([('name', '=', 'operaciones')])[0].manager_id.work_email
+
+				strSalesman		= order.user_id.name
+				if order.user_id.name == False:
+					strSalesman = "comercial indefinido"
+				strUser = self.getUserName ( self.env.user.id)
+
+				self.sendMailNote (
+										strMailTo,
+										strMailCc,
+										u"sistemas@setir.es",
+										u"oportunidad [{}] ganada".format( order.opportunity_id.name),
+										u"""
+										<BODY LANG="es-ES" DIR="LTR">
+										<P STYLE="margin-top: 0.1cm; margin-bottom: 0.2cm"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B><SPAN LANG="en-US">ACCI&Oacute;N
+										AUTOM&Aacute;TICA SOBRE LA OPORTUNIDAD</SPAN></B></U></FONT></FONT></P>
+										<TABLE WIDTH=749 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=5 CELLSPACING=0>
+											<COL WIDTH=246>
+											<COL WIDTH=481>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Oportunidad:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P LANG="en-US"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>{}</B></FONT></FONT></P>
+												</TD>
+											</TR>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cliente:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P LANG="en-US"><FONT COLOR="#0066cc"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>{}</B></FONT></FONT></FONT></P>
+												</TD>
+											</TR>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Nuevo estado:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B><FONT COLOR="#009900">Ganado</FONT>
+													</B><SPAN STYLE="font-weight: normal">(probabilidad 100%)</SPAN></FONT></FONT></P>
+												</TD>
+											</TR>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Ingreso estimado
+													actualizado*:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P LANG="en-US"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>{}</B></FONT></FONT></P>
+												</TD>
+											</TR>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Pedidos de venta
+													asociados:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P LANG="en-US"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>{}</B></FONT></FONT></P>
+												</TD>
+											</TR>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P LANG="en-US"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Comercial
+													asignado:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P LANG="en-US"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>{}</B></FONT></FONT></P>
+												</TD>
+											</TR>
+											<TR VALIGN=TOP>
+												<TD WIDTH=246>
+													<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cambio realzaido
+													por:</FONT></FONT></P>
+												</TD>
+												<TD WIDTH=481>
+													<P LANG="en-US"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>{}</B></FONT></FONT></P>
+												</TD>
+											</TR>
+										</TABLE>
+										<P STYLE="margin-bottom: 0cm"><BR>
+										</P>
+										<P STYLE="margin-bottom: 0cm"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>(*)
+										- Ingreso estimado = <FONT FACE="Arial, sans-serif">&sum;</FONT>
+										beneficios setir en los pedidos de venta asociados</FONT></FONT></P>
+										</BODY>
+										""".format ( order.opportunity_id.name, order.partner_id.name, fRevenue, strOrders, strSalesman, strUser)
+									)
 
 	#manada correo al comercial y al resposable del departameinto de "operaciones"
 	#por lo que es necesario crear el departamiento "operaciones" y su responsabñle con el correo establecido
@@ -285,58 +392,72 @@ class setirSaleOrder ( models.Model):
 
 		strUser = self.getUserName ( self.env.user.id)
 		
-		strNotification = '''
-								<P STYLE="margin-bottom: 0.2cm; font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B>DETALLE
-								DE LA ACCI&Oacute;N</B></FONT></FONT></FONT></P>
-								<TABLE WIDTH=470 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=5 CELLSPACING=0>
-									<COL WIDTH=188>
-									<COL WIDTH=260>
-									<TR VALIGN=TOP>
-										<TD WIDTH=188>
-											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Oferta/Pedido
-											de Venta:</FONT></FONT></FONT></P>
-										</TD>
-										<TD WIDTH=260>
-											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
-										</TD>
-									</TR>
-									<TR VALIGN=TOP>
-										<TD WIDTH=188>
-											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="text-decoration: none">Nuevo
-											estado</SPAN></FONT></FONT></FONT></P>
-										</TD>
-										<TD WIDTH=260>
-											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
-										</TD>
-									</TR>
-									<TR VALIGN=TOP>
-										<TD WIDTH=188>
-											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="text-decoration: none">Comercial
-											Asignado</SPAN></FONT></FONT></FONT></P>
-										</TD>
-										<TD WIDTH=260>
-											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
-										</TD>
-									</TR>
-									<TR VALIGN=TOP>
-										<TD WIDTH=188>
-											<P STYLE="font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cambio
-											realizado por</FONT></FONT></FONT></P>
-										</TD>
-										<TD WIDTH=260>
-											<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2>%s</FONT></FONT></P>
-										</TD>
-									</TR>
-								</TABLE>
-								<P STYLE="margin-bottom: 0cm; font-style: normal"><BR>
-								</P>
-							 ''' % (strOrder, strState, strSalesman, strUser)
+		strNotification = u"""
+							<BODY LANG="es-ES" DIR="LTR">
+							<P STYLE="margin-top: 0.1cm; margin-bottom: 0.2cm; font-style: normal">
+							<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><U><B>DETALLE
+							DE LA ACCI&Oacute;N <SPAN LANG="en-US">DE CAMBIO DE </SPAN><SPAN LANG="es-ES">ESTADO</SPAN></B></U></FONT></FONT></FONT></P>
+							<TABLE WIDTH=783 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=5 CELLSPACING=0>
+								<COL WIDTH=188>
+								<COL WIDTH=573>
+								<TR VALIGN=TOP>
+									<TD WIDTH=188>
+										<P STYLE="margin-top: 0.1cm; font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Oferta/Pedido
+										de Venta:</FONT></FONT></FONT></P>
+									</TD>
+									<TD WIDTH=573>
+										<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B><SPAN LANG="en-US">{}</SPAN></B></FONT></FONT></P>
+									</TD>
+								</TR>
+								<TR VALIGN=TOP>
+									<TD WIDTH=188>
+										<P STYLE="margin-top: 0.1cm; font-style: normal; text-decoration: none">
+										<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cliente:</FONT></FONT></FONT></P>
+									</TD>
+									<TD WIDTH=573>
+										<P><FONT COLOR="#0066cc"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B><SPAN LANG="en-US">{}</SPAN></B></FONT></FONT></FONT></P>
+									</TD>
+								</TR>
+								<TR VALIGN=TOP>
+									<TD WIDTH=188>
+										<P STYLE="margin-top: 0.1cm; font-style: normal; text-decoration: none">
+										<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Nuevo
+										estado</FONT></FONT></FONT></P>
+									</TD>
+									<TD WIDTH=573>
+										<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B><SPAN LANG="en-US">{}</SPAN></B></FONT></FONT></P>
+									</TD>
+								</TR>
+								<TR VALIGN=TOP>
+									<TD WIDTH=188>
+										<P STYLE="margin-top: 0.1cm; font-style: normal; text-decoration: none">
+										<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Comercial
+										Asignado</FONT></FONT></FONT></P>
+									</TD>
+									<TD WIDTH=573>
+										<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B><SPAN LANG="en-US">{}</SPAN></B></FONT></FONT></P>
+									</TD>
+								</TR>
+								<TR VALIGN=TOP>
+									<TD WIDTH=188>
+										<P STYLE="margin-top: 0.1cm; font-style: normal"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2>Cambio
+										realizado por</FONT></FONT></FONT></P>
+									</TD>
+									<TD WIDTH=573>
+										<P><FONT FACE="Arial, sans-serif"><FONT SIZE=2><B><SPAN LANG="en-US">{}</SPAN></B></FONT></FONT></P>
+									</TD>
+								</TR>
+							</TABLE>
+							<P STYLE="margin-bottom: 0cm"><BR>
+							</P>
+							</BODY>
+							 """.format ( strOrder, order.partner_id.name, strState, strSalesman, strUser)
 
 		self.sendMailNote (
 								strMailTo,
 								strMailCc,
-								"sistemas@setir.es",
-								"cambio estado oferta/pedido [%s], nuevo estado [%s]" % ( strOrder, strState),
+								u"sistemas@setir.es",
+								u"cambio estado oferta/pedido [{}], nuevo estado [{}]".format ( strOrder, strState),
 								strNotification
 							)
 
