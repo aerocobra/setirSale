@@ -16,7 +16,7 @@
 			<field name="inherit_id" ref="sale.view_quotation_tree"/>
 			<field name="arch" type="xml">
 				<xpath expr="/tree/field[@name='message_needaction']" position="after">
-                    <field name="template_id"/>
+                    <field name="template_id" string="Plantilla"/>
 				</xpath>
 				<xpath expr="/tree/field[@name='date_order']" position="attributes">
 					<attribute name="widget">date</attribute>
@@ -35,7 +35,7 @@
 			<field name="inherit_id" ref="sale.view_order_tree"/>
 			<field name="arch" type="xml">
 				<xpath expr="/tree/field[@name='message_needaction']" position="after">
-                    <field name="template_id"/>
+                    <field name="template_id" string="Plantilla"/>
 				</xpath>
 				<xpath expr="/tree/field[@name='date_order']" position="attributes">
 					<attribute name="widget">date</attribute>
