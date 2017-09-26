@@ -257,6 +257,9 @@ class setirSaleOrder ( models.Model):
 	@api.multi
 	def action_done(self):
 		#self.write({'state': 'done'})
+		if not self.x_idOperationUser or not self.x_dtPOformalize:
+			raise exceptions.ValidationError ( 'Es necesario indicar al responsable operaciones y/o formalizar')
+		
 		super ( setirSaleOrder, self).action_done()
 		self.write ( {'x_dtPOdone' : fields.Datetime.now()})
 		self.notifyWorkFlow( "PEDIDO DE VENTA - REALIZADO", True)
@@ -504,7 +507,7 @@ class setirSaleOrderLine ( models.Model):
 	_inherit = "sale.order.line"
 
 	x_fPriceProvider	= fields.Float (	string		= "COSTE",
-											required	= True,
+											#required	= True, NOTA: el NOT NULL no es compatible con vinculacion ventas-projects
 											inverse	= "on_price_provider_change"
 										)
 
