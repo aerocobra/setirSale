@@ -80,6 +80,8 @@
 					   </thead>
 					   <tbody class="sale_tbody">
 							<t t-foreach="doc.order_line" t-as="l">
+								<tr t-if="l.product_id.categ_id.name != 'rapel'">
+								<!-- no muestra los rapels-->
 								<tr t-if="l.product_uom_qty">
 									<td>
 									   <span t-field="l.name"/>
@@ -100,6 +102,7 @@
 									<td class="text-right">
 										<span t-field="l.price_subtotal" t-field-options="{&quot;widget&quot;: &quot;monetary&quot;, &quot;display_currency&quot;: &quot;doc.pricelist_id.currency_id&quot;}"/>
 									</td -->
+								</tr>
 								</tr>
 							</t>
 						</tbody>
