@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #setirSale.py
 import openerp.addons.decimal_precision as dp
-from openerp import api, fields, models
+from openerp import api, fields, models, _
 from openerp import tools
 from pygments.lexer import _inherit
 from datetime import datetime, timedelta
