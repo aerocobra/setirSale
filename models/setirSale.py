@@ -235,6 +235,9 @@ class setirSaleOrder ( models.Model):
 	@api.multi
 	def action_confirm(self):
 		for order in self:
+			if order.state != "sent":
+				raise exceptions.ValidationError ( u"Oferta no enviada al cliente, por favor, envíela antes")
+
 			order.write ( {'x_dtPOconfirm' : fields.Datetime.now()})
 			order.notifyWorkFlow( "PEDIDO DE VENTA - CREADO desde Ofera", True)
 			if order.opportunity_id:
