@@ -62,7 +62,6 @@ class setirSaleOrder ( models.Model):
 										compute					= '_amount_all',
 										track_visibility		= 'always')
 
-
 	strTemplate		= fields.Char	(	string					= "Pack",
 										related					= "template_id.name",
 										inverse					= "on_template")
