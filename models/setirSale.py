@@ -41,27 +41,39 @@ class setirSaleOrder ( models.Model):
 	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
 	#propagar a toas las lineas de pedido
 	x_eProvider		= fields.Selection (
-											string		= "Proveedor",
-											selection 	= "get_providers",
-											inverse		= "on_provider_change"
-											#required	= True ...NOTA: activarlo al terminar los PV antiguos
-											)
+											string				= "Proveedor",
+											selection 			= "get_providers",
+											inverse				= "on_provider_change")
 
-	idProvider		= fields.Many2one	(	string			= "Proveedor",
-											comodel_name	= "res.partner",
-											inverse			= "on_provider_change",
-											domain			= "[('is_company','=', True), ( 'supplier', '=', True)]")
+	idProvider		= fields.Many2one	(	string				= "Proveedor",
+											comodel_name		= "res.partner",
+											#inverse				= "on_provider_change",
+											domain				= "[('is_company','=', True), ( 'supplier', '=', True)]")
+	strProvider		= fields.Char		(	string				= "Proveedor",
+											related				= "idProvider.name")
 
-	x_fRevenue			= fields.Float		(	string				= 'Beneficio SETIR',
-												store				= True,
-												compute				= '_amount_all',
-												track_visibility	= 'always')
+	x_fRevenue		= fields.Float		(	string				= 'Beneficio SETIR',
+											store				= True,
+											compute				= '_amount_all',
+											track_visibility	= 'always')
 
-	x_fOrderRisk	= fields.Float	(	string				= 'Riesgo',
-										store				= True,
-										compute				= '_amount_all',
-										track_visibility	= 'always')
+	x_fOrderRisk	= fields.Float	(	string					= 'Riesgo',
+										store					= True,
+										compute					= '_amount_all',
+										track_visibility		= 'always')
 
+
+	strTemplate		= fields.Char	(	string					= "Pack",
+										related					= "template_id.name",
+										inverse					= "on_template")
+
+
+	@api.onchange ('strTemplate')
+	def on_template (self):
+		self.idProvider = self.template_id.idProvider.id
+		for line in self.order_line:
+			line.idProvider = self.idProvider.id
+			line.product_uom_change()
 
 	#se utiliza para mandar el mail utilizado la platilla ya creada
 	#1. muestra el dialogo de envio con la palntilla cargada
@@ -616,7 +628,7 @@ class setirSaleOrderLine ( models.Model):
 
 		#obtener tarifa en función del proveedor y producto selecccionados
 		#rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
-		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.idProvider.id)])
+		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.order_id.idProvider.id)])
 		if not rsTarifas:
 			self.price_unit = 0.0
 			return
@@ -660,7 +672,7 @@ class setirSaleOrderLine ( models.Model):
 
 		#obtener tarifa en función del proveedor y producto selecccionados
 		#rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
-		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.idProvider.id)])
+		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.order_id.idProvider.id)])
 		if not rsTarifas:
 			self.price_unit = 0.0
 			return {'domain': {'product_uom': []}}
