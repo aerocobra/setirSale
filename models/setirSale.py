@@ -10,6 +10,13 @@ from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 from openerp import exceptions
 
+class setirSaleQuoteTemplate ( models.Model):
+	_inherit	= "sale.quote.template"
+	
+	idProvider	= fields.Many2one	(	string			= "Proveedor",
+										comodel_name	= "res.partner",
+										domain			= "[('is_company','=', True), ( 'supplier', '=', True)]")
+
 class setirSaleOrder ( models.Model):
 	_inherit = "sale.order"
 
@@ -40,7 +47,10 @@ class setirSaleOrder ( models.Model):
 											#required	= True ...NOTA: activarlo al terminar los PV antiguos
 											)
 
-
+	idProvider		= fields.Many2one	(	string			= "Proveedor",
+											comodel_name	= "res.partner",
+											inverse			= "on_provider_change",
+											domain			= "[('is_company','=', True), ( 'supplier', '=', True)]")
 
 	x_fRevenue			= fields.Float		(	string				= 'Beneficio SETIR',
 												store				= True,
@@ -134,9 +144,7 @@ class setirSaleOrder ( models.Model):
 	def print_sale_report_one(self):
 
 		""" Print the invoice and mark it as sent, so that we can see more
-
 		  easily the next step of the workflow
-
 		 """
 
 		#assert len(self) == 1, 'This option should only be used for a single id at a time.'
@@ -174,10 +182,11 @@ class setirSaleOrder ( models.Model):
 
 	#se sobreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
-	@api.onchange('x_eProvider')
+	@api.onchange('x_eProvider', 'idProvider')
 	def on_provider_change ( self):
 		for line in self.order_line:
 			line.x_eProvider = self.x_eProvider
+			line.idProvider = self.idProvider.id
 			line.product_uom_change()
 
 	def get_providers (self):
@@ -531,6 +540,13 @@ class setirSaleOrderLine ( models.Model):
 											inverse		= "product_uom_change"
 											)
 
+	idProvider		= fields.Many2one	(	string			= "Proveedor",
+											comodel_name	= "res.partner",
+											inverse			= "product_uom_change",
+											domain			= "[('is_company','=', True), ( 'supplier', '=', True)]")
+
+
+
 	def get_line_risk ( self):
 		risk_amount		= 0.0
 		line_product	= self.product_id
@@ -588,7 +604,7 @@ class setirSaleOrderLine ( models.Model):
 
 	#se sobreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
-	@api.onchange('product_uom', 'product_uom_qty', 'x_eProvider')
+	@api.onchange('product_uom', 'product_uom_qty', 'x_eProvider', 'idProvider')
 	def product_uom_change ( self):
 		if not self.product_uom:
 			self.price_unit = 0.0
@@ -599,7 +615,8 @@ class setirSaleOrderLine ( models.Model):
 		self.x_fPriceProvider	= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
-		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
+		#rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
+		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.idProvider.id)])
 		if not rsTarifas:
 			self.price_unit = 0.0
 			return
@@ -642,7 +659,8 @@ class setirSaleOrderLine ( models.Model):
 		self.x_fPriceProvider	= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
-		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
+		#rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
+		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.idProvider.id)])
 		if not rsTarifas:
 			self.price_unit = 0.0
 			return {'domain': {'product_uom': []}}
