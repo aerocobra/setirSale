@@ -110,6 +110,40 @@
 		</record>
 	</data>
 	<data>
+		<!-- PLANTILLA PRESUPUESTO -->
+		<record model="ir.ui.view" id="setirSaleQuoteTemplateForm">
+			<!-- Name field (whatever) -->
+			<field name="name">setirSaleQuoteTemplateForm</field>
+			<!-- Parent object -->
+			<field name="model">sale.quote.template</field>
+			<!-- Parent View -->
+			<field name="inherit_id" ref="website_quote.view_sale_quote_template_form"/>
+			<!-- new structure in the form view -->
+			<field name="arch" type="xml">
+				<xpath expr="/form/sheet/group/group" position="before">
+					<group col="2" colspan="2">
+						<field name="idProvider" options="{'no_create': True}"/>
+					</group>
+				</xpath>
+			</field>
+		</record>
+		<record model="ir.ui.view" id="setirSaleQuoteTemplateTree">
+			<!-- Name field (whatever) -->
+			<field name="name">setirSaleQuoteTemplateTree</field>
+			<!-- Parent object -->
+			<field name="model">sale.quote.template</field>
+			<!-- Parent View -->
+			<field name="inherit_id" ref="website_quote.view_sale_quote_template_tree"/>
+			<!-- new structure in the form view -->
+			<field name="arch" type="xml">
+				<xpath expr="/tree/field[@name='name']" position="before">
+					<field name="idProvider"/>
+				</xpath>
+			</field>
+		</record>
+	</data>
+
+	<data>
 		<!-- ATENCION  -->
 		<!-- quitar opportuniti_id desde la vista heredada en el formulario, en otro caso este dato no se muestra en el mimo campo añadido aqui -->
 		<!-- For the form view and id field (whatever) -->
@@ -130,15 +164,17 @@
 				</xpath>
 				<!-- poner el proveedor comun para todas lás líneas de pedido -->
 				<xpath expr="/form/sheet/group/group/field[@name='payment_term_id']" position="after">
-					<field name="x_eProvider"/>
+					<field name="strProvider"  readonly="1"/>
+					<field name="idProvider"  options="{'no_create': True}"/>
+					<field name="strTemplate" invisible="1"/>
 				</xpath>
 
 				<!-- SALE.ORDER.LINE -->
 				<!-- FORM: poner tarifa en cada linea ed pedido -->
 				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='product_id']" position="after">
-					<!-- field name="x_eProvider"/ -->
 					<field name="x_strTarifa" readonly="1"/>
 					<field name="x_eProvider" invisible="1"/>
+					<field name="idProvider" invisible="1"/>
 				</xpath>
 				<xpath expr="/form/sheet/notebook/page/field/form/group/group/field[@name='price_unit']" position="after">
 					<field name="x_fPriceProvider"/>
@@ -159,9 +195,9 @@
 				
 				<!-- TREE: poner tarifa en cada linea ed pedido -->
 				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='name']" position="after">
-					<!-- field name="x_eProvider"/ -->
 					<field name="x_strTarifa" readonly="1"/>
 					<field name="x_eProvider" invisible="1"/>
+					<field name="idProvider" invisible="1"/>
 				</xpath>
 				<xpath expr="/form/sheet/notebook/page/field/tree/field[@name='product_uom_qty']" position="attributes">
 					<attribute name="string">CTDAD</attribute>
@@ -209,7 +245,6 @@
 		</record>
     </data>
 	<data>
-		<!-- For the form view and id field (whatever) -->
 		<record model="ir.ui.view" id="setirProductPriceListItemForm">
 			<!-- Name field (whatever) -->
 			<field name="name">setirProductPriceListItemForm</field>
