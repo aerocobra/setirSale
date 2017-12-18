@@ -10,6 +10,21 @@ from openerp.exceptions import UserError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 from openerp import exceptions
 
+class setirPartnerUnique ( models.Model):
+	_inherit		= "res.partner"
+	
+	@api.constrains ('name')
+	def checkNAME (self):
+		if self.name and self.search_count([('name','=', self.name)]) > 1:
+			raise exceptions.ValidationError ( "La empresa [{}] ya existe".format (self.name))
+		
+	@api.constrains ('vat')
+	def checkVAT (self):
+		if self.vat:
+			record = self.search([('vat','=', self.vat)]).sorted ( key = lambda x: x.id, reverse = True)
+			if record[0].name != self.name:
+				raise exceptions.ValidationError ( "NIF [{}] ya existe, empresa [{}]".format (self.vat, record[0].name))
+
 class setirSaleQuoteTemplate ( models.Model):
 	_inherit	= "sale.quote.template"
 	
@@ -40,14 +55,12 @@ class setirSaleOrder ( models.Model):
 
 	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
 	#propagar a toas las lineas de pedido
-	x_eProvider		= fields.Selection (
-											string				= "Proveedor",
-											selection 			= "get_providers",
-											inverse				= "on_provider_change")
+	#x_eProvider		= fields.Selection (
+	#										string				= "Proveedor",
+	#										selection 			= "get_providers")
 
 	idProvider		= fields.Many2one	(	string				= "Proveedor",
 											comodel_name		= "res.partner",
-											#inverse				= "on_provider_change",
 											domain				= "[('is_company','=', True), ( 'supplier', '=', True)]")
 	strProvider		= fields.Char		(	string				= "Proveedor",
 											related				= "idProvider.name")
@@ -193,10 +206,9 @@ class setirSaleOrder ( models.Model):
 
 	#se sobreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
-	@api.onchange('x_eProvider', 'idProvider')
+	@api.onchange('idProvider')
 	def on_provider_change ( self):
 		for line in self.order_line:
-			line.x_eProvider = self.x_eProvider
 			line.idProvider = self.idProvider.id
 			line.product_uom_change()
 
@@ -545,11 +557,8 @@ class setirSaleOrderLine ( models.Model):
 
 	x_strTarifa		= fields.Char ( string = "Tarifa", readonly = True)
 	#NOTE: selection key must be 'str', if 'int' ODOO doesn't store the selected value
-	x_eProvider		= fields.Selection (
-											string		= "Proveedor",
-											selection 	= "get_providers",
-											inverse		= "product_uom_change"
-											)
+	#x_eProvider		= fields.Selection (	string		= "Proveedor",
+	#										selection 	= "get_providers")
 
 	idProvider		= fields.Many2one	(	string			= "Proveedor",
 											comodel_name	= "res.partner",
@@ -615,7 +624,7 @@ class setirSaleOrderLine ( models.Model):
 
 	#se sobreescribe el metodo para que coja la tarifa de cada  linea de pedido en vez de todo el pedido
 	@api.one
-	@api.onchange('product_uom', 'product_uom_qty', 'x_eProvider', 'idProvider')
+	@api.onchange('product_uom', 'product_uom_qty', 'idProvider')
 	def product_uom_change ( self):
 		if not self.product_uom:
 			self.price_unit = 0.0
@@ -626,7 +635,6 @@ class setirSaleOrderLine ( models.Model):
 		self.x_fPriceProvider	= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
-		#rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
 		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.order_id.idProvider.id)])
 		if not rsTarifas:
 			self.price_unit = 0.0
@@ -670,7 +678,6 @@ class setirSaleOrderLine ( models.Model):
 		self.x_fPriceProvider	= 0.0
 
 		#obtener tarifa en función del proveedor y producto selecccionados
-		#rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', int(self.x_eProvider))])
 		rsTarifas				= self.env['product.pricelist'].search([('x_partner_id', '=', self.order_id.idProvider.id)])
 		if not rsTarifas:
 			self.price_unit = 0.0
